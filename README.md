@@ -26,15 +26,7 @@ Bu aracı kullanmak için tek yapmanız gereken projeyi sunucunuza klonlamak ve 
     apt-get update -y; apt-get upgrade -y; wget https://raw.githubusercontent.com/selmandemir/cyux-vps-yoneticisi/main/hehe; chmod 777 hehe; ./hehe
     ```
 
-## 🤝 Katkıda Bulunma
 
-Bu proje topluluk katkılarına açıktır. Çevirilerde bir hata bulursanız, yeni bir özellik eklemek isterseniz veya mevcut bir hatayı düzeltmek isterseniz lütfen çekinmeyin!
-
-1.  Bu projeyi **fork'layın**.
-2.  Kendi özelliğiniz için yeni bir dal (`git checkout -b yeni-ozellik`) oluşturun.
-3.  Değişikliklerinizi yapın ve **commit'leyin** (`git commit -m 'Yeni bir özellik eklendi'`).
-4.  Dalınızı itin (`git push origin yeni-ozellik`).
-5.  Bir **Pull Request** (PR) oluşturun.
 
 ## 📄 Lisans
 
