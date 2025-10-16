@@ -69,7 +69,7 @@ fun_badvpn() {
             inst_udp () {
                 if [[ ! -e "/bin/badvpn-udpgw" ]]; then
                     cd $HOME
-                    wget https://github.com/januda-ui/DRAGON-VPS-MANAGER/raw/main/Modulos/badvpn-udpgw -o /dev/null
+                    wget https://github.com/selmandemir/cyux-vps-yoneticisi/raw/main/Modulos/badvpn-udpgw -o /dev/null
                     mv -f $HOME/badvpn-udpgw /bin/badvpn-udpgw
                     chmod 777 /bin/badvpn-udpgw
                 fi

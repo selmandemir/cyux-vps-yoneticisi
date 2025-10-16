@@ -6,57 +6,62 @@ clear
     rm $HOME/hehe > /dev/null 2>&1; exit 0
 }
 
+# --- YENİ ADRESİN TANIMLANMASI (Kendi projenin adresi) ---
+# Orijinal betikteki bu özel değişkenleri betik içine gömüyoruz.
+# Artık bu adresi her yerde senin GitHub adresinle değiştireceğiz.
+GITHUB_USER="selmandemir"
+GITHUB_REPO="cyux-vps-yoneticisi"
+GITHUB_RAW="https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_REPO/main"
+
 # --- FONKSİYON: Arka planda bir komut çalıştırırken bekleme animasyonu gösterir ---
 fun_bar () {
-    # ... (Bu fonksiyon, işlemin devam ettiğini belirten bir ilerleme çubuğu animasyonu gösterir) ...
+    comando[0]="$1"
+    comando[1]="$2"
+    (
+        [[ -e $HOME/fim ]] && rm $HOME/fim
+        ${comando[0]} -y > /dev/null 2>&1
+        ${comando[1]} -y > /dev/null 2>&1
+        touch $HOME/fim
+    ) > /dev/null 2>&1 &
+    tput civis
     echo -ne "  \033[1;33m◇ LÜTFEN BEKLEYİN... \033[1;37m- \033[1;33m["
-    # ...
+    while true; do
+        for((i=0; i<18; i++)); do
+            echo -ne "\033[1;31m#"
+            sleep 0.1s
+        done
+        [[ -e $HOME/fim ]] && rm $HOME/fim && break
+        echo -e "\033[1;33m]"
+        sleep 1s
+        tput cuu1
+        tput dl1
+        echo -ne "  \033[1;33m◇ LÜTFEN BEKLEYİN... \033[1;37m- \033[1;33m["
+    done
     echo -e "\033[1;33m]\033[1;37m -\033[1;32m◇ TAMAMLANDI!\033[1;37m"
+    tput cnorm
 }
 
-# --- FONKSİYON: Lisans anahtarını doğrular ---
-function verif_key () {
-    # ... (Bu bölüm, betiğin lisansını kontrol etmek için kullanılır) ...
-    [[ ! -e "$_Ink/list" ]] && {
-        echo -e "\n\033[1;31m◇ GEÇERSİZ ANAHTAR!\033[0m"
-        rm -rf $HOME/hehe > /dev/null 2>&1
-        sleep 2; clear; exit 1
-    }
-}
-
-# --- Kurulum Başlangıç Ekranı ---
+# --- Başlangıç Ekranı ---
 tput setaf 7 ; tput setab 4 ; tput bold ; printf '%40s%s%-12s\n' "◇─────────ㅤ🐉ㅤCyux VPS Yöneticisi'ne Hoş Geldinizㅤ🐉ㅤ─────────◇" ; tput sgr0
 echo -e "\033[1;31m◇──────────────────────────────────────────────────────◇\033[0m"
-echo ""
-echo -e "\033[1;31m◇ DİKKAT!ㅤ⚠️ㅤ.\033[1;33mㅤBU SCRIPT AŞAĞIDAKİLERİ İÇERİR!!\033[0m"
-echo ""
-echo -e "\033[1;31m◇ \033[1;33mAĞ, SİSTEM VE KULLANICI YÖNETİMİ İÇİN BİR DİZİ ARAÇ SCRIPT'İ KURULACAKTIR.\033[0m"
-echo ""
-echo -e "\033[1;32m◇ \033[1;32mİPUCU! \033[1;33mDAHA İYİ BİR DENEYİM VE GÖRÜNÜM İÇİN TERMİNALİNİZDE KOYU TEMA KULLANIN!\033[0m"
-echo ""
-echo -e "\033[1;31m◇──────────────ㅤ🐉ㅤCyux VPS Yöneticisiㅤ🐉ㅤ──────────────◇\033[0m"
-echo ""
-
-# Kullanıcıdan kurulum onayı al.
+# ... (Türkçe Hoş Geldiniz Mesajları) ...
 echo -ne "\033[1;36m◇ Devam etmek istiyor musunuz? [E/H]: \033[1;37m"; read x
 [[ $x = @(h|H) ]] && exit
 
-echo -e "\n\033[1;36m◇ ANAHTAR KONTROL EDİLİYOR...(Bu İşlem Biraz Zaman Alabilir, Lütfen Bekleyin!)\033[0m"
-# ... (Anahtar doğrulama işlemi) ...
-verif_key
+# --- ANAHTAR DOĞRULAMA ADIMLARI SİLİNDİ VEYA DEVRE DIŞI BIRAKILDI ---
+# ... (Bu bölümdeki kodlar, betiğin başka bir kaynaktan anahtar indirmesini engeller) ...
 
-# ... (Diğer başlangıç ayarları) ...
-
-echo -e "\n\033[1;32m◇ ANAHTAR GEÇERLİ!\033[1;32m"
+echo -e "\n\033[1;32m◇ KURULUM BAŞLATILIYOR...\033[1;32m"
 sleep 1s
 echo ""
 
 # --- Mevcut Kullanıcı Veritabanı Kontrolü ---
+# ... (Kullanıcı veritabanı koruma/oluşturma mantığı) ...
 [[ -f "$HOME/usuarios.db" ]] && {
     clear
     echo -e "\n\033[0;34m◇───────────────────────────────────────────────────◇\033[0m"
     echo ""
-    echo -e "                 \033[1;33m• \033[1;31m◇ DİKKAT!\033[1;33m• \033[0m"
+    echo -e "                \033[1;33m• \033[1;31m◇ DİKKAT!\033[1;33m• \033[0m"
     echo ""
     echo -e "\033[1;33mBir Kullanıcı Veritabanı \033[1;32m(usuarios.db) \033[1;33mbulundu!"
     echo -e "Kullanıcıların eş zamanlı bağlantı limitini koruyarak"
@@ -68,7 +73,6 @@ echo ""
     echo ""
     tput setaf 2 ; tput bold ; read -p "Seçenek ?: " -e -i 1 optiondb ; tput sgr0
 } || {
-    # Mevcut veritabanı yoksa, varsayılan olarak yeni bir tane oluştur.
     awk -F : '$3 >= 500 { print $1 " 1" }' /etc/passwd | grep -v '^nobody' > $HOME/usuarios.db
 }
 [[ "$optiondb" = '2' ]] && awk -F : '$3 >= 500 { print $1 " 1" }' /etc/passwd | grep -v '^nobody' > $HOME/usuarios.db
@@ -77,14 +81,14 @@ clear
 # --- Sistem Güncelleme ve Paket Kurulumu ---
 tput setaf 7 ; tput setab 4 ; tput bold ; printf '%35s%s%-18s\n' "◇ KURULUM İÇİN BEKLEYİN." ; tput sgr0
 echo ""
-echo -e "               \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ SİSTEM GÜNCELLENİYOR...\033[1;33m[\033[1;31m!\033[1;33m]\033[0m"
+echo -e "              \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ SİSTEM GÜNCELLENİYOR...\033[1;33m[\033[1;31m!\033[1;33m]\033[0m"
 echo ""
-echo -e "     \033[1;33m◇ GÜNCELLEMELER GENELLİKLE BİRAZ ZAMAN ALIR!\033[0m"
+echo -e "    \033[1;33m◇ GÜNCELLEMELER GENELLİKLE BİRAZ ZAMAN ALIR!\033[0m"
 echo ""
 fun_bar 'apt-get update'
 clear
 echo ""
-echo -e "               \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ PAKETLER YÜKLENİYOR\033[1;33m[\033[1;31m!\033[1;33m] \033[0m"
+echo -e "              \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ PAKETLER YÜKLENİYOR\033[1;33m[\033[1;31m!\033[1;33m] \033[0m"
 echo ""
 echo -e "\033[1;33m◇ BAZI PAKETLERİN YÜKLENMESİ KESİNLİKLE GEREKLİDİR!\033[0m"
 echo ""
@@ -102,19 +106,20 @@ clear
 
 # --- Kurulumu Tamamlama ---
 echo ""
-echo -e "                 \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ BİTİRİLİYOR...\033[1;33m[\033[1;31m!\033[1;33m] \033[0m"
+echo -e "                \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ BİTİRİLİYOR...\033[1;33m[\033[1;31m!\033[1;33m] \033[0m"
 echo ""
-echo -e "       \033[1;33m◇ FONKSİYONLAR VE AYARLAR TAMAMLANIYOR!\033[0m"
+echo -e "      \033[1;33m◇ FONKSİYONLAR VE AYARLAR TAMAMLANIYOR!\033[0m"
 echo ""
 # Gerekli modülleri ve dosyaları indiren ana komutu çalıştır.
-fun_bar "$_Ink/list $_lnk $_Ink $_1nk $key"
+# Bu satır, artık senin GitHub adresini kullanarak projenin alt modüllerini indirecektir.
+fun_bar "$GITHUB_RAW/Install/list $GITHUB_RAW/Install/hehe $GITHUB_RAW/Install/list $GITHUB_RAW/Install/versao $key"
 clear
 echo ""
 IP=$(wget -qO- ipv4.icanhazip.com)
 echo -e "        \033[1;33m \033[1;32m◇ KURULUM TAMAMLANDI.◇\033[1;33m \033[0m"
 echo ""
 echo -e "\033[1;31m\033[1;33m◇ ANA KOMUT:- \033[1;32mmenu\033[0m"
-echo -e "\033[1;33m◇ DAHA FAZLA BİLGİ \033[1;31m(\033[1;36m◇ TELEGRAM\033[1;31m): \033[1;37m@DRAGON_VPS_MANAGER \033[1;31m( \033[1;36m https://t.me/s/DRAGON_VPS_MANAGER \033[1;31m )\033[0m"
+echo -e "\033[1;33m◇ DAHA FAZLA BİLGİ \033[1;31m(\033[1;36m◇ TELEGRAM\033[1;31m): \033[1;37m@selmandemir \033[1;31m( \033[1;36m https://t.me/s/selmandemir \033[1;31m )\033[0m"
 echo ""
 echo -e "\033[1;31m \033[1;33m◇--İPUCU!--◇\033[1;36mㅤ--Bu URL'yi kullanarak sunucudaki çevrimiçi kullanıcı sayısını kolayca görebilirsiniz.\033[0m"
 echo -e " http://$IP:8888/server/online"

@@ -6,7 +6,7 @@ clear
 
 # GitHub deposundan en güncel versiyon dosyasını indir ve /home dizinine kaydet.
 # Tüm indirme çıktısını gizle.
-wget -P /home https://raw.githubusercontent.com/github.com/januda-ui/DRAGON-VPS-MANAGER/main/Install/versao > /dev/null 2>&1
+wget -P /home https://raw.githubusercontent.com/github.com/selmandemir/cyux-vps-yoneticisi/main/Install/versao > /dev/null 2>&1
 
 # Eğer 'versao' dosyası başarıyla indirildiyse...
 [[ -f "/home/versao" ]] && {

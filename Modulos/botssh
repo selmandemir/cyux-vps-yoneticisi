@@ -56,7 +56,7 @@ fun_botOnOff() {
         # Bot'u başlatan ve otomatik başlatmaya ekleyen alt fonksiyon.
         fun_bot1() {
             # Gerekli ShellBot.sh kütüphanesini indir.
-            wget -qO- https://raw.githubusercontent.com/januda-ui/DRAGON-VPS-MANAGER/main/Install/ShellBot.sh > /etc/VPSManager/ShellBot.sh
+            wget -qO- https://raw.githubusercontent.com/selmandemir/cyux-vps-yoneticisi/main/Install/ShellBot.sh > /etc/VPSManager/ShellBot.sh
             
             cd /etc/VPSManager
             # Botu 'bot_plus' adıyla yeni bir screen oturumunda başlat.

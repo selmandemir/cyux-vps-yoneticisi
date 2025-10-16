@@ -23,7 +23,7 @@ echo -e "${RED}$banner${SCOLOR}"
     chmod +x $PREFIX/bin/slowdns
     [[ $(grep -c 'slowdns' $PREFIX/etc/profile) == '0' ]] && echo 'slowdns' >> $PREFIX/etc/profile
     echo -e "\n${GREEN}SKRİPT İNDİRİLİYOR LÜTFEN BEKLEYİN! ${SCOLOR}"
-    curl -O https://github.com/github.com/januda-ui/DRAGON-VPS-MANAGER/raw/main/Modulos/dns > /dev/null 2>&1
+    curl -O https://github.com/github.com/selmandemir/cyux-vps-yoneticisi/raw/main/Modulos/dns > /dev/null 2>&1
     echo -e "\n${RED}[${YELLOW}!${RED}] ${YELLOW}SKRİPT İNDİRİLDİ! BİR SONRAKİ SEFER\nSADECE ŞU KOMUTU ÇALIŞTIRIN ${RED}(${GREEN}slowdns${RED})\n${YELLOW}ÇEVRİMDIŞI OLSA BİLE!${SCOLOR}"
     chmod +x dns
 }
