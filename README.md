@@ -1,7 +1,7 @@
 # 🐧 Cyux VPS Yöneticisi
 
 [![Lisans: MIT](https://img.shields.io/badge/Lisans-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Katkıda Bulun](https://img.shields.io/badge/Katk%C4%B1da%20Bulun-A%C3%A7%C4%B1k-brightgreen.svg)](https://github.com/selmandemir/vps-manager-t-rk-e/graphs/contributors)
+[![Katkıda Bulun](https://img.shields.io/badge/Katk%C4%B1da%20Bulun-A%C3%A7%C4%B1k-brightgreen.svg)](https://github.com/selmandemir/cyux-vps-yoneticisi/graphs/contributors)
 
 **Cyux VPS Yöneticisi**, Linux sunucularınızdaki (VPS) yaygın görevleri basitleştirmek ve otomatikleştirmek için tasarlanmış, kullanımı kolay bir Bash script koleksiyonudur. Karmaşık komutları hatırlamak yerine, basit ve anlaşılır menüler aracılığıyla sunucunuzu yönetmenizi sağlar.
 
@@ -23,12 +23,12 @@ Bu aracı kullanmak için tek yapmanız gereken projeyi sunucunuza klonlamak ve 
 
 1.  **Projeyi Klonlayın:**
     ```bash
-    git clone [https://github.com/selmandemir/vps-manager-t-rk-e.git](https://github.com/selmandemir/vps-manager-t-rk-e.git)
+    git clone [https://github.com/selmandemir/cyux-vps-yoneticisi.git](https://github.com/selmandemir/cyux-vps-yoneticisi.git)
     ```
 
 2.  **Klasöre Gidin:**
     ```bash
-    cd vps-manager-t-rk-e
+    cd cyux-vps-yoneticisi
     ```
 
 3.  **Script'i Çalıştırın:**
@@ -37,7 +37,6 @@ Bu aracı kullanmak için tek yapmanız gereken projeyi sunucunuza klonlamak ve 
     chmod +x dragon.sh
     ./dragon.sh
     ```
-    *Not: Ana script dosyasının adını daha sonra `cyux.sh` olarak değiştirebiliriz.*
 
 ## 🤝 Katkıda Bulunma
 
