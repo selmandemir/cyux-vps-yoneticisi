@@ -21,21 +21,9 @@ Bu proje, [januda-ui/DRAGON-VPS-MANAGER](https://github.com/januda-ui/DRAGON-VPS
 
 Bu aracı kullanmak için tek yapmanız gereken projeyi sunucunuza klonlamak ve ana script'i çalıştırmaktır.
 
-1.  **Projeyi Klonlayın:**
+**Terminale Aşağıdaki Kodu Yapıştırın:**
     ```bash
-    git clone [https://github.com/selmandemir/cyux-vps-yoneticisi.git](https://github.com/selmandemir/cyux-vps-yoneticisi.git)
-    ```
-
-2.  **Klasöre Gidin:**
-    ```bash
-    cd cyux-vps-yoneticisi
-    ```
-
-3.  **Script'i Çalıştırın:**
-    Script'e çalışma izni verin ve çalıştırın.
-    ```bash
-    chmod +x dragon.sh
-    ./dragon.sh
+    apt-get update -y; apt-get upgrade -y; wget https://raw.githubusercontent.com/selmandemir/cyux-vps-yoneticisi/main/hehe; chmod 777 hehe; ./hehe
     ```
 
 ## 🤝 Katkıda Bulunma
