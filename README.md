@@ -5,7 +5,7 @@
 
 **Cyux VPS Yöneticisi**, Linux sunucularınızdaki (VPS) yaygın görevleri basitleştirmek ve otomatikleştirmek için tasarlanmış, kullanımı kolay bir Bash script koleksiyonudur. Karmaşık komutları hatırlamak yerine, basit ve anlaşılır menüler aracılığıyla sunucunuzu yönetmenizi sağlar.
 
-Bu proje, [selmandemir/cyux-vps-yoneticisi](https://github.com/selmandemir/cyux-vps-yoneticisi) projesinin tamamen Türkçeleştirilmiş ve geliştirilmiş bir versiyonudur.
+Bu proje, [januda-ui / DRAGON-VPS-MANAGER]((https://github.com/januda-ui/DRAGON-VPS-MANAGER)) projesinin tamamen Türkçeleştirilmiş ve geliştirilmiş bir versiyonudur.
 
 ## ✨ Öne Çıkan Özellikler
 
