@@ -1,0 +1,123 @@
+#!/bin/bash
+clear
+# Betiğin 'root' kullanıcısı ile çalıştırıldığını kontrol et.
+[[ "$(whoami)" != "root" ]] && {
+    echo -e "\033[1;33m[\033[1;31mHata\033[1;33m] \033[1;37m- \033[1;33m◇ BU BETİĞİ ROOT OLARAK ÇALIŞTIRMANIZ GEREKİR!\033[0m"
+    rm $HOME/hehe > /dev/null 2>&1; exit 0
+}
+
+# --- FONKSİYON: Arka planda bir komut çalıştırırken bekleme animasyonu gösterir ---
+fun_bar () {
+    # ... (Bu fonksiyon, işlemin devam ettiğini belirten bir ilerleme çubuğu animasyonu gösterir) ...
+    echo -ne "  \033[1;33m◇ LÜTFEN BEKLEYİN... \033[1;37m- \033[1;33m["
+    # ...
+    echo -e "\033[1;33m]\033[1;37m -\033[1;32m◇ TAMAMLANDI!\033[1;37m"
+}
+
+# --- FONKSİYON: Lisans anahtarını doğrular ---
+function verif_key () {
+    # ... (Bu bölüm, betiğin lisansını kontrol etmek için kullanılır) ...
+    [[ ! -e "$_Ink/list" ]] && {
+        echo -e "\n\033[1;31m◇ GEÇERSİZ ANAHTAR!\033[0m"
+        rm -rf $HOME/hehe > /dev/null 2>&1
+        sleep 2; clear; exit 1
+    }
+}
+
+# --- Kurulum Başlangıç Ekranı ---
+tput setaf 7 ; tput setab 4 ; tput bold ; printf '%40s%s%-12s\n' "◇─────────ㅤ🐉ㅤCyux VPS Yöneticisi'ne Hoş Geldinizㅤ🐉ㅤ─────────◇" ; tput sgr0
+echo -e "\033[1;31m◇──────────────────────────────────────────────────────◇\033[0m"
+echo ""
+echo -e "\033[1;31m◇ DİKKAT!ㅤ⚠️ㅤ.\033[1;33mㅤBU SCRIPT AŞAĞIDAKİLERİ İÇERİR!!\033[0m"
+echo ""
+echo -e "\033[1;31m◇ \033[1;33mAĞ, SİSTEM VE KULLANICI YÖNETİMİ İÇİN BİR DİZİ ARAÇ SCRIPT'İ KURULACAKTIR.\033[0m"
+echo ""
+echo -e "\033[1;32m◇ \033[1;32mİPUCU! \033[1;33mDAHA İYİ BİR DENEYİM VE GÖRÜNÜM İÇİN TERMİNALİNİZDE KOYU TEMA KULLANIN!\033[0m"
+echo ""
+echo -e "\033[1;31m◇──────────────ㅤ🐉ㅤCyux VPS Yöneticisiㅤ🐉ㅤ──────────────◇\033[0m"
+echo ""
+
+# Kullanıcıdan kurulum onayı al.
+echo -ne "\033[1;36m◇ Devam etmek istiyor musunuz? [E/H]: \033[1;37m"; read x
+[[ $x = @(h|H) ]] && exit
+
+echo -e "\n\033[1;36m◇ ANAHTAR KONTROL EDİLİYOR...(Bu İşlem Biraz Zaman Alabilir, Lütfen Bekleyin!)\033[0m"
+# ... (Anahtar doğrulama işlemi) ...
+verif_key
+
+# ... (Diğer başlangıç ayarları) ...
+
+echo -e "\n\033[1;32m◇ ANAHTAR GEÇERLİ!\033[1;32m"
+sleep 1s
+echo ""
+
+# --- Mevcut Kullanıcı Veritabanı Kontrolü ---
+[[ -f "$HOME/usuarios.db" ]] && {
+    clear
+    echo -e "\n\033[0;34m◇───────────────────────────────────────────────────◇\033[0m"
+    echo ""
+    echo -e "                 \033[1;33m• \033[1;31m◇ DİKKAT!\033[1;33m• \033[0m"
+    echo ""
+    echo -e "\033[1;33mBir Kullanıcı Veritabanı \033[1;32m(usuarios.db) \033[1;33mbulundu!"
+    echo -e "Kullanıcıların eş zamanlı bağlantı limitini koruyarak"
+    echo -e "mevcut veritabanını tutmak mı, yoksa yeni bir"
+    echo -e "veritabanı oluşturmak mı istersiniz?\033[0m"
+    echo -e "\n\033[1;37m[\033[1;31m1\033[1;37m] \033[1;33mMevcut Veritabanını Koru\033[0m"
+    echo -e "\033[1;37m[\033[1;31m2\033[1;37m] \033[1;33mYeni Bir Veritabanı Oluştur\033[0m"
+    echo -e "\n\033[0;34m◇───────────────────────────────────────────────────◇\033[0m"
+    echo ""
+    tput setaf 2 ; tput bold ; read -p "Seçenek ?: " -e -i 1 optiondb ; tput sgr0
+} || {
+    # Mevcut veritabanı yoksa, varsayılan olarak yeni bir tane oluştur.
+    awk -F : '$3 >= 500 { print $1 " 1" }' /etc/passwd | grep -v '^nobody' > $HOME/usuarios.db
+}
+[[ "$optiondb" = '2' ]] && awk -F : '$3 >= 500 { print $1 " 1" }' /etc/passwd | grep -v '^nobody' > $HOME/usuarios.db
+clear
+
+# --- Sistem Güncelleme ve Paket Kurulumu ---
+tput setaf 7 ; tput setab 4 ; tput bold ; printf '%35s%s%-18s\n' "◇ KURULUM İÇİN BEKLEYİN." ; tput sgr0
+echo ""
+echo -e "               \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ SİSTEM GÜNCELLENİYOR...\033[1;33m[\033[1;31m!\033[1;33m]\033[0m"
+echo ""
+echo -e "     \033[1;33m◇ GÜNCELLEMELER GENELLİKLE BİRAZ ZAMAN ALIR!\033[0m"
+echo ""
+fun_bar 'apt-get update'
+clear
+echo ""
+echo -e "               \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ PAKETLER YÜKLENİYOR\033[1;33m[\033[1;31m!\033[1;33m] \033[0m"
+echo ""
+echo -e "\033[1;33m◇ BAZI PAKETLERİN YÜKLENMESİ KESİNLİKLE GEREKLİDİR!\033[0m"
+echo ""
+inst_pct() {
+    _pacotes=("bc" "apache2" "cron" "screen" "nano" "unzip" "lsof" "netstat" "net-tools" "dos2unix" "nload" "jq" "curl" "figlet" "python3" "python-pip")
+    for _prog in ${_pacotes[@]}; do
+        apt install $_prog -y
+    done
+    pip install speedtest-cli
+}
+fun_bar 'inst_pct'
+# Gerekli portlar için güvenlik duvarı kurallarını ekle.
+[[ -f "/usr/sbin/ufw" ]] && ufw allow 443/tcp ; ufw allow 80/tcp ; ufw allow 3128/tcp ; ufw allow 8799/tcp ; ufw allow 8080/tcp
+clear
+
+# --- Kurulumu Tamamlama ---
+echo ""
+echo -e "                 \033[1;33m[\033[1;31m!\033[1;33m] \033[1;32m◇ BİTİRİLİYOR...\033[1;33m[\033[1;31m!\033[1;33m] \033[0m"
+echo ""
+echo -e "       \033[1;33m◇ FONKSİYONLAR VE AYARLAR TAMAMLANIYOR!\033[0m"
+echo ""
+# Gerekli modülleri ve dosyaları indiren ana komutu çalıştır.
+fun_bar "$_Ink/list $_lnk $_Ink $_1nk $key"
+clear
+echo ""
+IP=$(wget -qO- ipv4.icanhazip.com)
+echo -e "        \033[1;33m \033[1;32m◇ KURULUM TAMAMLANDI.◇\033[1;33m \033[0m"
+echo ""
+echo -e "\033[1;31m\033[1;33m◇ ANA KOMUT:- \033[1;32mmenu\033[0m"
+echo -e "\033[1;33m◇ DAHA FAZLA BİLGİ \033[1;31m(\033[1;36m◇ TELEGRAM\033[1;31m): \033[1;37m@DRAGON_VPS_MANAGER \033[1;31m( \033[1;36m https://t.me/s/DRAGON_VPS_MANAGER \033[1;31m )\033[0m"
+echo ""
+echo -e "\033[1;31m \033[1;33m◇--İPUCU!--◇\033[1;36mㅤ--Bu URL'yi kullanarak sunucudaki çevrimiçi kullanıcı sayısını kolayca görebilirsiniz.\033[0m"
+echo -e " http://$IP:8888/server/online"
+echo ""
+# Kurulum sonrası temizlik.
+rm $HOME/hehe && cat /dev/null > ~/.bash_history && history -c

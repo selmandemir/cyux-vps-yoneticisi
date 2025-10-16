@@ -1,0 +1,133 @@
+#!/bin/bash
+fun_badvpn() {
+    clear
+    # Başlık metnini mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+    echo -e "\E[44;1;37m        ㅤ🐉ㅤBADVPN YÖNETİCİSİㅤ🐉ㅤ         \E[0m"
+    echo ""
+    
+    # Badvpn (udpvpn) çalışıyorsa, hangi portları kullandığını göster.
+    if ps x | grep -w udpvpn | grep -v grep 1>/dev/null 2>/dev/null; then
+        echo -e "\033[1;33m◇ AKTİF PORTLAR\033[1;37m: \033[1;32m$(netstat -nplt | grep 'badvpn-ud' | awk {'print $4'} | cut -d: -f2 | xargs)"
+    else
+        sleep 0.1
+    fi
+    
+    # Badvpn'in çalışıp çalışmadığını kontrol et ve menüde durumunu göster (♦ = Aktif, ○ = Pasif).
+    var_sks1=$(ps x | grep "udpvpn" | grep -v grep > /dev/null && echo -e "\033[1;32m♦ " || echo -e "\033[1;31m○ ")
+    echo ""
+    
+    # Menü seçeneklerini listele.
+    echo -e "\033[1;31m[\033[1;36m1\033[1;31m] \033[1;37m• \033[1;33mBADVPN'i AÇ/KAPAT (Port 7300) $var_sks1 \033[0m"
+    echo -e "\033[1;31m[\033[1;36m2\033[1;31m] \033[1;37m• \033[1;33mÖZEL PORT AÇ\033[0m"
+    echo -e "\033[1;31m[\033[1;36m0\033[1;31m] \033[1;37m• \033[1;33mGERİ DÖN\033[0m"
+    echo ""
+    
+    # Kullanıcıdan bir seçim yapmasını iste.
+    echo -ne "\033[1;32m◇ NE YAPMAK İSTERSİNİZ \033[1;33m?\033[1;37m "
+    read resposta
+    
+    if [[ "$resposta" = '1' ]]; then
+        # Eğer Badvpn zaten çalışıyorsa, durdurma işlemini yap.
+        if ps x | grep -w udpvpn | grep -v grep 1>/dev/null 2>/dev/null; then
+            clear
+            echo -e "\E[41;1;37m            BADVPN'i DURDURMA             \E[0m"
+            echo ""
+            # Badvpn'i durduran fonksiyon.
+            fun_stopbad () {
+                # 'udpvpn' adıyla çalışan tüm screen oturumlarını bul ve sonlandır.
+                for pidudpvpn in $(screen -ls | grep ".udpvpn" | awk {'print $1'}); do
+                    screen -r -S "$pidudpvpn" -X quit
+                done
+                # Otomatik başlatma dosyasından Badvpn satırını sil.
+                [[ $(grep -wc "udpvpn" /etc/autostart) != '0' ]] && {
+                    sed -i '/udpvpn/d' /etc/autostart
+                }
+                sleep 1
+                screen -wipe >/dev/null
+            }
+            echo -e "\033[1;32m◇ BADVPN DEVRE DIŞI BIRAKILIYOR\033[1;33m"
+            echo ""
+            fun_stopbad
+            echo ""
+            echo -e "\033[1;32m◇ BADVPN BAŞARIYLA DEVRE DIŞI BIRAKILDI!\033[1;33m"
+            sleep 3
+            fun_badvpn
+        else
+            # Eğer Badvpn çalışmıyorsa, başlatma işlemini yap.
+            clear
+            echo -e "\033[1;32m◇ BADVPN BAŞLATILIYOR... \033[0m\n"
+            # Badvpn'i başlatan ve otomatik başlatmaya ekleyen fonksiyon.
+            fun_udpon () {
+                screen -dmS udpvpn /bin/badvpn-udpgw --listen-addr 127.0.0.1:7300 --max-clients 10000 --max-connections-for-client 8
+                # /etc/autostart dosyasına ekle ki sistem yeniden başlayınca çalışsın.
+                if [[ $(grep -wc "udpvpn" /etc/autostart) = '0' ]]; then
+                    echo "ps x | grep 'udpvpn' | grep -v 'grep' || screen -dmS udpvpn /bin/badvpn-udpgw --listen-addr 127.0.0.1:7300 --max-clients 10000 --max-connections-for-client 8 --client-socket-sndbuf 10000" >> /etc/autostart
+                fi
+                sleep 1
+            }
+            # Badvpn programı kurulu değilse indiren fonksiyon.
+            inst_udp () {
+                if [[ ! -e "/bin/badvpn-udpgw" ]]; then
+                    cd $HOME
+                    wget https://github.com/januda-ui/DRAGON-VPS-MANAGER/raw/main/Modulos/badvpn-udpgw -o /dev/null
+                    mv -f $HOME/badvpn-udpgw /bin/badvpn-udpgw
+                    chmod 777 /bin/badvpn-udpgw
+                fi
+            }
+            echo ""
+            inst_udp
+            fun_udpon
+            echo ""
+            echo -e "\033[1;32m◇ BADVPN BAŞARIYLA AKTİF EDİLDİ\033[1;33m"
+            sleep 3
+            fun_badvpn
+        fi
+    elif [[ "$resposta" = '2' ]]; then
+        # Özel bir portta Badvpn başlatma seçeneği.
+        if ps x | grep -w udpvpn | grep -v grep 1>/dev/null 2>/dev/null; then
+            clear
+            echo -e "\E[44;1;37m             ÖZEL PORTTA BADVPN             \E[0m"
+            echo ""
+            echo -ne "\033[1;32m◇ HANGİ PORTU KULLANMAK İSTERSİNİZ \033[1;33m?\033[1;37m: "
+            read porta
+            if [[ -z "$porta" ]]; then
+                echo ""
+                echo -e "\033[1;31m◇ Geçersiz port!"
+                sleep 2
+                fun_badvpn
+            fi
+            echo ""
+            echo -e "\033[1;32m◇ BADVPN, \033[1;31m$porta\033[1;32m PORTUNDA BAŞLATILIYOR\033[1;33m"
+            echo ""
+            # Belirtilen portta Badvpn'i başlatan fonksiyon.
+            fun_abrirptbad() {
+                sleep 1
+                screen -dmS udpvpn /bin/badvpn-udpgw --listen-addr 127.0.0.1:$porta --max-clients 10000 --max-connections-for-client 8
+                sleep 1
+            }
+            fun_abrirptbad
+            echo ""
+            echo -e "\033[1;32m◇ BADVPN BAŞARIYLA AKTİF EDİLDİ\033[1;33m"
+            sleep 2
+            fun_badvpn
+        else
+            clear
+            echo -e "\033[1;31m◇ BU FONKSİYON KULLANILAMAZ\n\n\033[1;33mÖNCE BADVPN'i [1] SEÇENEĞİ İLE AKTİF EDİN!\033[1;33m"
+            sleep 3
+            fun_badvpn
+        fi
+    elif [[ "$resposta" = '0' ]]; then
+        # Menüye geri dönme seçeneği.
+        echo ""
+        echo -e "\033[1;31m◇ Geri dönülüyor...\033[0m"
+        sleep 1
+        menu
+    else
+        # Geçersiz seçenek.
+        echo ""
+        echo -e "\033[1;31m◇ Geçersiz seçenek!\033[0m"
+        sleep 1
+        fun_badvpn
+    fi
+}
+fun_badvpn

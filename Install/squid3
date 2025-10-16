@@ -1,0 +1,181 @@
+#! /bin/sh
+
+# --- Değişken Tanımlamaları ---
+NAME=squid3
+DESC="Squid HTTP Proxy Sunucusu"
+DAEMON=/usr/sbin/squid3
+PIDFILE=/var/run/$NAME.pid
+CONFIG=/etc/squid3/squid.conf
+SQUID_ARGS="-YC -f $CONFIG"
+
+# Eğer varsa, varsayılan ayar dosyasını yükle
+[ ! -f /etc/default/squid ] || . /etc/default/squid
+
+# LSB (Linux Standard Base) fonksiyonlarını dahil et
+. /lib/lsb/init-functions
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+# Squid programı (/usr/sbin/squid3) mevcut değilse çık
+[ -x $DAEMON ] || exit 0
+
+# Bir process'in açabileceği dosya sayısını yükselt
+ulimit -n 65535
+
+# --- FONKSİYONLAR ---
+
+# squid.conf dosyasından önbellek dizinini (cache_dir) bulur
+find_cache_dir () {
+    w="     "
+        res=`$DAEMON -k parse -f $CONFIG 2>&1 |
+        grep "Processing:" |
+        sed s/.*Processing:\ // |
+        sed -ne '
+            s/^['"$w"']*'$1'['"$w"']\+[^'"$w"']\+['"$w"']\+\([^'"$w"']\+\).*$/\1/p;
+            t end;
+            d;
+            :end q'`
+        [ -n "$res" ] || res=$2
+        echo "$res"
+}
+
+# squid.conf dosyasından belirtilen bir ayarı okur
+grepconf () {
+    w="     "
+        res=`$DAEMON -k parse -f $CONFIG 2>&1 |
+        grep "Processing:" |
+        sed s/.*Processing:\ // |
+        sed -ne '
+            s/^['"$w"']*'$1'['"$w"']\+\([^'"$w"']\+\).*$/\1/p;
+            t end;
+            d;
+            :end q'`
+    [ -n "$res" ] || res=$2
+    echo "$res"
+}
+
+# Squid'in çalışması için gereken /var/run/squid3 dizinini oluşturur
+create_run_dir () {
+    run_dir=/var/run/squid3
+    usr=`grepconf cache_effective_user proxy`
+    grp=`grepconf cache_effective_group proxy`
+
+    if [ "$(dpkg-statoverride --list $run_dir)" = "" ] &&
+       [ ! -e $run_dir ] ; then
+        mkdir -p $run_dir
+        chown $usr:$grp $run_dir
+        [ -x /sbin/restorecon ] && restorecon $run_dir
+    fi
+}
+
+# Squid servisini başlatma fonksiyonu
+start () {
+    cache_dir=`find_cache_dir cache_dir`
+    run_dir=/var/run/squid3
+    create_run_dir
+
+    # Eğer cache dizini varsa ama içi boşsa, Squid'in önbellek yapısını oluştur
+    if test -d "$cache_dir" -a ! -d "$cache_dir/00"
+    then
+        log_warning_msg "$DESC önbellek yapısı oluşturuluyor"
+        $DAEMON -z -f $CONFIG
+        [ -x /sbin/restorecon ] && restorecon -R $cache_dir
+    fi
+
+    umask 027
+    ulimit -n 65535
+    cd $run_dir
+    start-stop-daemon --quiet --start \
+        --pidfile $PIDFILE \
+        --exec $DAEMON -- $SQUID_ARGS < /dev/null
+    return $?
+}
+
+# Squid servisini durdurma fonksiyonu
+stop () {
+    PID=`cat $PIDFILE 2>/dev/null`
+    start-stop-daemon --stop --quiet --pidfile $PIDFILE --exec $DAEMON
+    # Programın kapanması için 2 saniye bekle
+    sleep 2
+    # Eğer program hala çalışıyorsa, tamamen kapanana kadar bekle
+    if test -n "$PID" && kill -0 $PID 2>/dev/null
+    then
+        log_action_begin_msg " Bekleniyor"
+        cnt=0
+        while kill -0 $PID 2>/dev/null
+        do
+            cnt=`expr $cnt + 1`
+            # Eğer 2 dakika (24*5 saniye) içinde kapanmazsa hata ver
+            if [ $cnt -gt 24 ]
+            then
+                log_action_end_msg 1
+                return 1
+            fi
+            sleep 5
+            log_action_cont_msg ""
+        done
+        log_action_end_msg 0
+        return 0
+    else
+        return 0
+    fi
+}
+
+# Eğer squid.conf içinde farklı bir PID dosyası belirtilmişse onu kullan
+cfg_pidfile=`grepconf pid_filename`
+if test "${cfg_pidfile:-none}" != "none" -a "$cfg_pidfile" != "$PIDFILE"
+then
+    log_warning_msg "squid.conf dosyasındaki pid_filename ayarı, bu scripti geçersiz kılıyor"
+    PIDFILE="$cfg_pidfile"
+fi
+
+# --- ANA KONTROL BLOGU ---
+# Script'e verilen argümana göre ($1) işlem yap
+
+case "$1" in
+    start)
+    # Başlatmadan önce yapılandırma dosyasında hata var mı diye kontrol et
+    res=`$DAEMON -k parse -f $CONFIG 2>&1 | grep -o "FATAL: .*"`
+    if test -n "$res";
+    then
+        log_failure_msg "HATA: $res"
+        exit 3
+    else
+        log_daemon_msg "$DESC başlatılıyor" "$NAME"
+        if start; then log_end_msg $?; else log_end_msg $?; fi
+    fi
+    ;;
+    stop)
+    log_daemon_msg "$DESC durduruluyor" "$NAME"
+    if stop; then log_end_msg $?; else log_end_msg $?; fi
+    ;;
+    reload|force-reload)
+    # Ayarları yeniden yüklemeden önce hata kontrolü yap
+    res=`$DAEMON -k parse -f $CONFIG 2>&1 | grep -o "FATAL: .*"`
+    if test -n "$res";
+    then
+        log_failure_msg "HATA: $res"
+        exit 3
+    else
+        log_action_msg "$DESC yapılandırma dosyaları yeniden yükleniyor"
+        start-stop-daemon --stop --signal 1 \
+            --pidfile $PIDFILE --quiet --exec $DAEMON
+        log_action_end_msg 0
+    fi
+    ;;
+    restart)
+    log_daemon_msg "$DESC yeniden başlatılıyor" "$NAME"
+    stop
+    if start; then log_end_msg $?; else log_end_msg $?; fi
+    ;;
+    status)
+    status_of_proc -p $PIDFILE $DAEMON $NAME && exit 0 || exit 3
+    ;;
+    *)
+    # Eğer geçersiz bir komut verilirse, kullanım talimatını göster
+    echo "Kullanım: /etc/init.d/$NAME {start|stop|reload|force-reload|restart|status}"
+    exit 3
+    ;;
+esac
+
+exit 0

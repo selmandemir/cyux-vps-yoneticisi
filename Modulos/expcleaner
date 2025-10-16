@@ -1,0 +1,79 @@
+#!/bin/bash
+# Mevcut zamanı saniye cinsinden al (Unix timestamp).
+datenow=$(date +%s)
+
+# --- FONKSİYON: Kullanıcının OpenVPN sertifikasını iptal eder ---
+remove_ovp () {
+    # Eğer sistem Debian/Ubuntu ise, grup adını 'nogroup' olarak ayarla.
+    if [[ -e /etc/debian_version ]]; then
+        GROUPNAME=nogroup
+    fi
+    user="$1"
+    cd /etc/openvpn/easy-rsa/
+    # EasyRSA kullanarak kullanıcının sertifikasını iptal et.
+    ./easyrsa --batch revoke $user
+    # Sertifika İptal Listesini (CRL) yeniden oluştur.
+    ./easyrsa gen-crl
+    # Eski sertifika dosyalarını temizle.
+    rm -rf pki/reqs/$user.req
+    rm -rf pki/private/$user.key
+    rm -rf pki/issued/$user.crt
+    rm -rf /etc/openvpn/crl.pem
+    # Güncel CRL dosyasını OpenVPN klasörüne kopyala.
+    cp /etc/openvpn/easy-rsa/pki/crl.pem /etc/openvpn/crl.pem
+    chown nobody:$GROUPNAME /etc/openvpn/crl.pem
+    # Kullanıcıya ait .ovpn ve .zip dosyalarını sil.
+    [[ -e $HOME/$user.ovpn ]] && rm $HOME/$user.ovpn > /dev/null 2>&1
+    [[ -e /var/www/html/openvpn/$user.zip ]] && rm /var/www/html/openvpn/$user.zip > /dev/null 2>&1
+} > /dev/null 2>&1 # Bu fonksiyonun tüm çıktısını gizle.
+
+# Başlık satırını yazdır.
+echo -e "\E[44;1;37m◇Kullanıcı      ◇Tarih         ◇Durum         ◇İşlem     \E[0m"
+echo ""
+
+# Sistemdeki tüm kullanıcılar için bir döngü başlat.
+for user in $(awk -F: '{print $1}' /etc/passwd); do
+    # Kullanıcının son kullanma tarihini al.
+    expdate=$(chage -l $user|awk -F: '/Account expires/{print $2}')
+    
+    # Eğer hesabın süresi "hiçbir zaman" dolmuyorsa, bu kullanıcıyı atla.
+    echo $expdate|grep -q never && continue
+    
+    # Tarihi okunabilir formata çevir (GG/AA/YYYY).
+    datanormal=$(date -d"$expdate" '+%d/%m/%Y')
+    
+    # Kullanıcı adını ve son kullanma tarihini ekrana yazdır.
+    tput setaf 3 ; tput bold ; printf '%-15s%-17s%s' $user $datanormal ; tput sgr0
+    
+    # Son kullanma tarihini saniye cinsinden al.
+    expsec=$(date +%s --date="$expdate")
+    
+    # Mevcut zaman ile son kullanma tarihi arasındaki farkı hesapla.
+    diff=$(echo $datenow - $expsec|bc -l)
+    tput setaf 2 ; tput bold
+    
+    # Eğer fark negatifse (yani tarih henüz gelmemişse), kullanıcı geçerlidir.
+    if echo $diff|grep -q ^\-; then
+        echo "◇ GEÇERLİ, SİLİNMEDİ"
+        continue # Döngüde bir sonraki kullanıcıya geç.
+    fi
+    
+    # Eğer fark pozitifse (tarih geçmişse), kullanıcıyı sil.
+    tput setaf 1 ; tput bold
+    echo "◇ SÜRESİ DOLDU, SİLİNDİ"
+    pkill -f $user # Kullanıcının tüm aktif işlemlerini sonlandır.
+    userdel --force $user # Kullanıcıyı sistemden sil.
+    
+    # Kullanıcıyı veritabanından sil.
+    grep -v ^$user[[:space:]] /root/usuarios.db > /tmp/ph ; cat /tmp/ph > /root/usuarios.db
+    
+    # Eğer OpenVPN kuruluysa, kullanıcının sertifikasını da iptal et.
+    if [[ -e /etc/openvpn/server.conf ]]; then
+        remove_ovp $user
+    fi
+done
+
+# İşlem tamamlandığında kontrol dosyasını güncelle.
+echo '0' > /etc/VPSManager/Exp
+tput sgr0 
+echo ""

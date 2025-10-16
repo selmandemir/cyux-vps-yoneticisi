@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Kullanıcı limitlerinin saklandığı veritabanı dosyasının yolu.
+database="/root/usuarios.db"
+
+# --- FONKSİYON: Çoklu girişleri kontrol eder ve limiti aşanları sonlandırır ---
+coklu_giris_kontrolu() {
+    (
+        # Sistemdeki normal kullanıcılar (UID >= 1000) için bir döngü başlat.
+        while read user; do
+            # Kullanıcının bağlantı limitini veritabanından oku. Kayıt yoksa 1 olarak varsay.
+            [[ $(grep -wc "$user" $database) != '0' ]] && limit="$(grep -w $user $database | cut -d' ' -f2)" || limit='1'
+            
+            # --- SSH Bağlantı Kontrolü ---
+            # Kullanıcının anlık SSH bağlantı sayısını say.
+            conssh="$(ps -u $user | grep sshd | wc -l)"
+            
+            # Eğer SSH bağlantı sayısı limiti aşıyorsa...
+            [[ "$conssh" -gt "$limit" ]] && {
+                # Kullanıcıya ait tüm işlemleri sonlandır (tüm SSH oturumlarını kapat).
+                pkill -u $user
+            }
+            
+            # --- OpenVPN Bağlantı Kontrolü ---
+            # Eğer OpenVPN kuruluysa devam et.
+            [[ -e /etc/openvpn/openvpn-status.log ]] && {
+                # Kullanıcının anlık OpenVPN bağlantı sayısını say.
+                ovp="$(grep -E ,"$user", /etc/openvpn/openvpn-status.log | wc -l)"
+                
+                # Eğer OpenVPN bağlantı sayısı limiti aşıyorsa...
+                [[ "$ovp" -gt "$limit" ]] && {
+                    # Limiti aşan bağlantı sayısını hesapla.
+                    pidokill=$(($ovp - $limit))
+                    # Limiti aşan bağlantıların ID'lerini listele.
+                    listpid=$(grep -E ,"$user", /etc/openvpn/openvpn-status.log | cut -d "," -f3 | head -n $pidokill)
+                    
+                    # Limiti aşan her bir bağlantıyı sonlandırmak için döngü başlat.
+                    while read ovpids; do
+                        (
+                            # OpenVPN yönetim arayüzüne telnet ile bağlan ve 'kill' komutunu gönder.
+                            telnet localhost 7505 <<-EOF
+                                kill $ovpids
+EOF
+                        ) &>/dev/null &
+                    done <<<"$listpid"
+                }
+            }
+        done <<<"$(awk -F: '$3 >= 1000 {print $1}' /etc/passwd)"
+    ) &
+}
+
+# --- ANA DÖNGÜ: Sınırlayıcıyı sürekli çalıştırır ---
+# Bu sonsuz döngü, her 15 saniyede bir kontrol fonksiyonunu çağırır.
+while true; do
+    echo 'Kontrol ediliyor...'
+    coklu_giris_kontrolu > /dev/null 2>&1
+    sleep 15s
+done

@@ -1,0 +1,120 @@
+#!/bin/bash
+
+clear
+
+# --- FONKSİYON: Arka planda bir komut çalışırken "Lütfen Bekleyin" animasyonu gösterir ---
+fun_bar () {
+    # Çalıştırılacak komutları bir diziye ata.
+    comando[0]="$1"
+    comando[1]="$2"
+    
+    # Komutları arka planda çalıştır. Bittiğinde 'fim' adında bir dosya oluşturur.
+    (
+        [[ -e $HOME/fim ]] && rm $HOME/fim
+        ${comando[0]} > /dev/null 2>&1
+        ${comando[1]} > /dev/null 2>&1
+        touch $HOME/fim
+    ) > /dev/null 2>&1 &
+    
+    # İmleci gizle.
+    tput civis
+    echo -ne "   \033[1;33mLÜTFEN BEKLEYİN ... \033[1;37m- \033[1;33m["
+    
+    # 'fim' dosyası oluşana kadar dönen bir yükleme çubuğu animasyonu göster.
+    while true; do
+        for((i=0; i<18; i++)); do
+            echo -ne "\033[1;31m#"
+            sleep 0.1s
+        done
+        [[ -e $HOME/fim ]] && rm $HOME/fim && break
+        echo -e "\033[1;33m]"
+        sleep 1s
+        tput cuu1 # Bir satır yukarı çık
+        tput dl1  # Satırı sil
+        echo -ne "   \033[1;33mLÜTFEN BEKLEYİN ... \033[1;37m- \033[1;33m["
+    done
+    
+    # İşlem bittiğinde onayla.
+    echo -e "\033[1;33m]\033[1;37m -\033[1;32m TAMAM !\033[1;37m"
+    # İmleci tekrar görünür yap.
+    tput cnorm
+}
+
+echo " "
+
+# --- FONKSİYON: Güncel versiyon dosyasını GitHub'dan indirir ---
+fun_atts () {
+    # Eski versiyon dosyalarını temizle.
+    [[ -e /home/versao ]] && rm /home/versao
+    [[ -e /tmp/att ]] && rm /tmp/att
+    
+    # GitHub'dan en son versiyon dosyasını indir.
+    wget -c -P /home https://raw.githubusercontent.com/januda-ui/DRAGON-VPS-MANAGER/main/Sistema/versao
+    
+    # İndirilen dosyayı geçici bir konuma taşı.
+    [[ -f "/home/versao" ]] && mv /home/versao /tmp/att
+    
+    # Eğer lokal versiyon dosyası yoksa, menüyü de sil (yeniden kurulum için).
+    [[ ! -e /bin/versao ]] && rm -rf /bin/menu
+} > /dev/null 2>&1
+
+# ASCII Sanatı ile Başlık
+echo -e "ㅤ🐉ㅤCyux VPS Yöneticisiㅤ🐉ㅤ" | figlet
+echo " "
+echo -e "   \033[1;32m◇ MEVCUT GÜNCELLEMELER KONTROL EDİLİYOR\033[0m\n"
+
+# İndirme işlemi sırasında animasyon göster.
+fun_bar 'fun_atts'
+
+# İndirme başarısız olduysa hata ver.
+[[ ! -f "/tmp/att" ]] && {
+    echo -e "\n\033[1;31m◇ SUNUCUYA BAĞLANIRKEN HATA OLUŞTU\n"
+    echo -ne "\033[1;31m◇ \033[1;32mMENÜ'ye\033[1;33m dönmek için \033[1;31mENTER'a\033[0m basın."; read
+    menu
+}
+
+echo " "
+
+# Lokal versiyon ile sunucudaki versiyonu karşılaştır.
+vrs1=$(sed -n '1 p' /bin/versao | sed -e 's/[^0-9]//ig')
+vrs2=$(sed -n '1 p' /tmp/att | sed -e 's/[^0-9]//ig')
+
+# Eğer versiyonlar aynıysa...
+[[ "$vrs1" == "$vrs2" ]] && {
+    echo -e " \033[1;36m   ◇ SCRIPT'İNİZ ZATEN GÜNCEL!\033[1;32m\n"
+    rm /tmp/att > /dev/null 2>&1
+    echo -ne " \033[1;31m◇ \033[1;32mMENÜ'ye\033[1;33m dönmek için \033[1;31mENTER'a\033[0m basın."; read
+    menu
+} || {
+    # Eğer yeni bir versiyon varsa...
+    echo -e "  \033[1;36m◇ YENİ BİR GÜNCELLEME MEVCUT!\033[1;33m\n"
+    echo -e "  \033[1;32m◇ GÜNCELLEME DETAYLARI:\033[0m\n"
+    
+    # Güncelleme notlarını ekrana yazdır.
+    while read linha; do
+        echo -e "  \033[1;37m- \033[1;33m$linha"
+    done < "/tmp/att"
+    
+    echo " "
+    # Kullanıcıya güncelleme yapıp yapmak istemediğini sor.
+    echo -ne "  \033[1;32m◇ GÜNCELLEMEK İSTER MİSİNİZ \033[1;31m? \033[1;33m[e/h]:\033[1;37m "; read res
+    
+    if [[ "$res" = e || "$res" = E ]]; then
+        echo -e "\n\033[1;32m◇ GÜNCELLEME BAŞLATILIYOR..."
+        sleep 3
+        
+        # Ana kurulum script'ini indir ve çalıştır.
+        wget https://raw.githubusercontent.com/januda-ui/DRAGON-VPS-MANAGER/main/hehe > /dev/null 2>&1
+        chmod +x hehe
+        ./hehe
+        clear
+        
+        echo -e "\033[1;32m◇ SCRIPT BAŞARIYLA GÜNCELLENDİ\033[0m\n"
+        rm /tmp/att > /dev/null 2>&1
+        echo -ne "\033[1;31m◇ \033[1;32mMENÜ'ye\033[1;33m dönmek için \033[1;31mENTER'a\033[0m basın."; read
+        menu
+    else
+        # Eğer kullanıcı 'h' derse, menüye dön.
+        menu
+    fi
+}

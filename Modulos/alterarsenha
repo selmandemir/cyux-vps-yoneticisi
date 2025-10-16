@@ -1,0 +1,92 @@
+#!/bin/bash
+# Başlık metnini mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+tput setaf 7 ; tput setab 4 ; tput bold ; printf '%35s%s%-10s\n' "🐉ㅤKullanıcı Şifresini Değiştirmeㅤ🐉" ; tput sgr0
+echo ""
+echo -e "\033[1;33mKULLANICI LİSTESİ VE MEVCUT ŞİFRELERİ: \033[0m"
+echo ""
+
+# Sistemdeki normal kullanıcıları (/etc/passwd dosyasından) listele.
+_userT=$(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody)
+i=0
+unset _userPass
+
+# Her bir kullanıcı için bir döngü başlat.
+while read _user; do
+    i=$(expr $i + 1)
+    _oP=$i
+    [[ $i == [1-9] ]] && i=0$i && oP+=" 0$i"
+    
+    # Kullanıcının şifresini /etc/VPSManager/senha/ dizinindeki dosyadan okumayı dene.
+    if [[ -e "/etc/VPSManager/senha/$_user" ]]; then
+        _senha="$(cat /etc/VPSManager/senha/$_user)"
+    else
+        # Eğer şifre dosyası yoksa 'Bilinmiyor' olarak belirt.
+        _senha='Bilinmiyor'
+    fi
+    
+    # Kullanıcı adını ve şifresini formatlı bir şekilde ekrana yazdır.
+    suser=$(echo -e "\033[1;31m[\033[1;36m$i\033[1;31m] \033[1;37m- \033[1;32m$_user\033[0m")
+    ssenha=$(echo -e "\033[1;33mŞifre\033[1;37m: $_senha")
+    printf '%-60s%s\n' "$suser" "$ssenha"
+    
+    # Daha sonra kolay seçim için kullanıcı listesini bir değişkende biriktir.
+    _userPass+="\n${_oP}:${_user}"
+done <<< "${_userT}"
+
+# Sistemdeki toplam kullanıcı sayısını bul.
+num_user=$(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody | wc -l)
+echo ""
+
+# Kullanıcıdan bir seçim yapmasını iste.
+echo -ne "\033[1;32mBir kullanıcı girin veya seçin \033[1;33m[\033[1;36m1\033[1;31m-\033[1;36m$num_user\033[1;33m]\033[1;37m: " ; read option
+
+# Seçilen numaraya karşılık gelen kullanıcı adını bul.
+user=$(echo -e "${_userPass}" | grep -E "\b$option\b" | cut -d: -f2)
+
+# Eğer giriş boş veya geçersizse hata ver.
+if [[ -z $option ]]; then
+    tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo "Boş veya geçersiz alan!" ; echo "" ; tput sgr0
+    exit 1
+elif [[ -z $user ]]; then
+    tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo "Boş veya geçersiz bir isim girdiniz!" ; echo "" ; tput sgr0
+    exit 1
+else
+    # Seçilen kullanıcı sistemde gerçekten var mı diye kontrol et.
+    if [[ `grep -c "/$user:" /etc/passwd` -ne 0 ]]; then
+        # Kullanıcıdan yeni şifreyi girmesini iste.
+        echo -ne "\n\033[1;32m\033[1;33m$user\033[1;32m kullanıcısı için yeni şifre\033[1;37m: "; read password
+        
+        # Şifrenin uzunluğunu kontrol et.
+        sizepass=$(echo ${#password})
+        if [[ $sizepass -lt 4 ]]; then
+            tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo "Boş veya geçersiz şifre! En az 4 karakter kullanın." ; echo "" ; tput sgr0
+            exit 1
+        else
+            # Kullanıcının o anda sisteme bağlı olup olmadığını kontrol et.
+            ps x | grep $user | grep -v grep | grep -v pt > /tmp/rem
+            if [[ `grep -c $user /tmp/rem` -eq 0 ]]; then
+                # Eğer kullanıcı bağlı değilse, şifresini direkt değiştir.
+                echo "$user:$password" | chpasswd
+                tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo "$user kullanıcısının şifresi '$password' olarak değiştirildi." ; echo "" ; tput sgr0
+                # Yeni şifreyi daha sonra göstermek için dosyaya kaydet.
+                echo "$password" > /etc/VPSManager/senha/$user
+                exit 1
+            else
+                # Eğer kullanıcı bağlıysa, önce bağlantısını kes.
+                echo ""
+                tput setaf 7 ; tput setab 4 ; tput bold ; echo "Kullanıcı çevrimiçi. Bağlantısı kesiliyor..." ; tput sgr0
+                pkill -f $user
+                
+                # Bağlantıyı kestikten sonra şifreyi değiştir.
+                echo "$user:$password" | chpasswd
+                tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo "$user kullanıcısının şifresi '$password' olarak değiştirildi." ; echo "" ; tput sgr0
+                # Yeni şifreyi kaydet.
+                echo "$password" > /etc/VPSManager/senha/$user
+                exit 1
+            fi
+        fi
+    else
+        # Eğer kullanıcı sistemde bulunamazsa hata ver.
+        tput setaf 7 ; tput setab 4 ; tput bold ; echo "" ; echo "$user kullanıcısı mevcut değil!" ; echo "" ; tput sgr0
+    fi
+fi

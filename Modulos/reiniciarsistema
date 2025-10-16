@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Ekrana kırmızı renkte yeniden başlatma mesajını yazdır.
+echo -e "\033[1;31m◇ YENİDEN BAŞLATILIYOR...\033[0m"
+
+# Sunucuyu hemen şimdi yeniden başlat.
+shutdown -r now

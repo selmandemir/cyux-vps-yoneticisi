@@ -1,0 +1,120 @@
+#!/bin/bash
+
+# --- FONKSİYON: Kullanıcının OpenVPN sertifikasını iptal eder ---
+remove_ovp () {
+    # Eğer sistem Debian/Ubuntu ise, grup adını 'nogroup' olarak ayarla.
+    if [[ -e /etc/debian_version ]]; then
+        GROUPNAME=nogroup
+    fi
+    user="$1"
+    cd /etc/openvpn/easy-rsa/
+    # EasyRSA kullanarak kullanıcının sertifikasını iptal et.
+    ./easyrsa --batch revoke $user
+    # Sertifika İptal Listesini (CRL) yeniden oluştur.
+    ./easyrsa gen-crl
+    # Eski sertifika dosyalarını temizle ve güncel CRL dosyasını kopyala.
+    rm -rf pki/reqs/$user.req
+    rm -rf pki/private/$user.key
+    rm -rf pki/issued/$user.crt
+    rm -rf /etc/openvpn/crl.pem
+    cp /etc/openvpn/easy-rsa/pki/crl.pem /etc/openvpn/crl.pem
+    chown nobody:$GROUPNAME /etc/openvpn/crl.pem
+    # Kullanıcıya ait .ovpn ve .zip dosyalarını sil.
+    [[ -e $HOME/$user.ovpn ]] && rm $HOME/$user.ovpn > /dev/null 2>&1
+    [[ -e /var/www/html/openvpn/$user.zip ]] && rm /var/www/html/openvpn/$user.zip > /dev/null 2>&1
+} > /dev/null 2>&1 # Bu fonksiyonun tüm çıktısını gizle.
+
+database="/root/usuarios.db"
+clear
+# Başlık metnini mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+tput setaf 7 ; tput setab 4 ; tput bold ; printf '%32s%s%-13s\n' "ㅤ🐉ㅤ🚮ㅤSSH Kullanıcısı Silmeㅤ🚮ㅤ🐉ㅤ" ; tput sgr0
+echo ""
+# Ana menü seçeneklerini göster.
+echo -e "\033[1;31m[\033[1;36m1\033[1;31m]\033[1;33m BİR KULLANICIYI SİL"
+echo -e "\033[1;31m[\033[1;36m2\033[1;31m]\033[1;33m TÜM KULLANICILARI SİL"
+echo -e "\033[1;31m[\033[1;36m3\033[1;31m]\033[1;33m GERİ DÖN"
+echo ""
+read -p "$(echo -e "\033[1;32m◇ NE YAPMAK İSTERSİNİZ\033[1;31m ?\033[1;37m : ")" -e -i 1 resp
+
+# --- Seçenek 1: Tek Kullanıcı Silme ---
+if [[ "$resp" = "1" ]]; then
+    clear
+    tput setaf 7 ; tput setab 4 ; tput bold ; printf '%32s%s%-13s\n' "ㅤ🐉ㅤ🚮ㅤSSH Kullanıcısı Silmeㅤ🚮ㅤ🐉ㅤ" ; tput sgr0
+    echo ""
+    echo -e "\033[1;33m◇ KULLANICI LİSTESİ: \033[0m"
+    echo ""
+    _userT=$(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody)
+    i=0
+    unset _userPass
+    # Sistemdeki tüm kullanıcıları numaralandırarak listele.
+    while read _user; do
+        i=$(expr $i + 1)
+        _oP=$i
+        [[ $i == [1-9] ]] && i=0$i && oP+=" 0$i"
+        echo -e "\033[1;31m[\033[1;36m$i\033[1;31m] \033[1;37m- \033[1;32m$_user\033[0m"
+        _userPass+="\n${_oP}:${_user}"
+    done <<< "${_userT}"
+    echo ""
+    num_user=$(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody | wc -l)
+    echo -ne "\033[1;32m◇ Bir kullanıcı girin veya seçin \033[1;33m[\033[1;36m1\033[1;31m-\033[1;36m$num_user\033[1;33m]\033[1;37m: " ; read option
+    user=$(echo -e "${_userPass}" | grep -E "\b$option\b" | cut -d: -f2)
+
+    if [[ -z $option ]] || [[ -z $user ]]; then
+        tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo " ◇ Kullanıcı boş veya geçersiz!   " ; echo "" ; tput sgr0
+        exit 1
+    else
+        # Kullanıcının sistemde olup olmadığını kontrol et.
+        if cat /etc/passwd | grep -w $user > /dev/null; then
+            echo ""
+            # Kullanıcının aktif bağlantılarını sonlandır.
+            pkill -f "$user" > /dev/null 2>&1
+            # Kullanıcıyı sistemden sil.
+            deluser --force $user > /dev/null 2>&1
+            echo -e "\E[41;1;37m◇ $user kullanıcısı başarıyla kaldırıldı! \E[0m"
+            # Kullanıcıyı veritabanından sil.
+            grep -v "^$user[[:space:]]" /root/usuarios.db > /tmp/ph ; cat /tmp/ph > /root/usuarios.db
+            rm /etc/VPSManager/senha/$user 1>/dev/null 2>/dev/null
+            # OpenVPN kuruluysa, sertifikasını iptal et.
+            if [[ -e /etc/openvpn/server.conf ]]; then
+                remove_ovp $user
+            fi
+            exit 1
+        else
+            tput setaf 7 ; tput setab 4 ; tput bold ; echo "" ; echo "◇ $user kullanıcısı mevcut değil!" ; echo "" ; tput sgr0
+        fi
+    fi
+# --- Seçenek 2: Tüm Kullanıcıları Silme ---
+elif [[ "$resp" = "2" ]]; then
+    clear
+    tput setaf 7 ; tput setab 4 ; tput bold ; printf '%32s%s%-13s\n' "ㅤ🐉ㅤ🚮ㅤTüm Kullanıcıları Silㅤ🚮ㅤ🐉ㅤ" ; tput sgr0
+    echo ""
+    echo -ne "\033[1;33m◇ TÜM KULLANICILARI GERÇEKTEN SİLMEK İSTİYOR MUSUNUZ \033[1;37m[e/h]: "; read opc
+    if [[ "$opc" = "e" ]]; then
+        echo -e "\n\033[1;33m◇ Lütfen Bekleyin...\033[1;32m.\033[1;31m.\033[1;33m.\033[0m"
+        # Sistemdeki tüm normal kullanıcılar için döngü başlat.
+        for user in $(cat /etc/passwd | awk -F : '$3 > 900 {print $1}' | grep -vi "nobody"); do
+            pkill -f $user > /dev/null 2>&1
+            deluser --force $user > /dev/null 2>&1
+            if [[ -e /etc/openvpn/server.conf ]]; then
+               remove_ovp $user
+            fi
+        done
+        # Veritabanını ve .zip dosyalarını temizle.
+        rm $HOME/usuarios.db && touch $HOME/usuarios.db
+        rm *.zip > /dev/null 2>&1
+        echo -e "\n\033[1;32m◇TÜM KULLANICILAR BAŞARIYLA SİLİNDİ!\033[0m"
+        sleep 2
+        menu
+    else
+        echo -e "\n\033[1;31m◇ Menüye dönülüyor...\033[0m"
+        sleep 2
+        menu
+    fi
+# --- Seçenek 3: Geri Dön ---
+elif [[ "$resp" = "3" ]]; then
+    menu
+else
+    echo -e "\n\033[1;31m◇ Geçersiz seçenek!\033[0m"
+    sleep 1.5s
+    menu
+fi

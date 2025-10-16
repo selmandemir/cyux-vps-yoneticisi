@@ -1,0 +1,25 @@
+#!/bin/bash
+clear
+
+# Eğer daha önceki bir kontrolden kalma /home/versao dosyası varsa, onu sil.
+[[ -e /home/versao ]] && rm /home/versao
+
+# GitHub deposundan en güncel versiyon dosyasını indir ve /home dizinine kaydet.
+# Tüm indirme çıktısını gizle.
+wget -P /home https://raw.githubusercontent.com/github.com/januda-ui/DRAGON-VPS-MANAGER/main/Install/versao > /dev/null 2>&1
+
+# Eğer 'versao' dosyası başarıyla indirildiyse...
+[[ -f "/home/versao" ]] && {
+    # Sunucuda mevcut kurulu olan versiyon numarasını al (sadece rakamları tut).
+    vrs1=$(sed -n '1 p' /bin/versao | sed -e 's/[^0-9]//ig')
+    
+    # Yeni indirilen dosyadaki versiyon numarasını al (sadece rakamları tut).
+    vrs2=$(sed -n '1 p' /home/versao | sed -e 's/[^0-9]//ig')
+    
+    # Eğer mevcut versiyon ile yeni versiyon birbirinden FARKLI ise...
+    [[ "$vrs1" != "$vrs2" ]] && {
+        # Yeni versiyon dosyasını /tmp/att olarak taşı. 
+        # Bu, ana menü script'inin bir güncelleme olduğunu anlamasını sağlar.
+        mv /home/versao /tmp/att
+    }
+}

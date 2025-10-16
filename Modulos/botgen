@@ -1,0 +1,44 @@
+#!/bin/bash
+# 'bot_gen' adında bir screen oturumunun çalışıp çalışmadığını kontrol et.
+if [[ $(screen -list| grep -c 'bot_gen') == '0' ]]; then
+    # --- BOT AKTİVASYON BÖLÜMÜ ---
+    clear
+    # Başlık metnini mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+    echo -e "\E[44;1;37m      ㅤ🐉ㅤCyux VPS Yöneticisi Telegram Bot Aktivasyonuㅤ🐉ㅤ      \E[0m"
+    echo ""
+    
+    # Kullanıcıdan Telegram Bot Token'ını iste.
+    echo -ne "\033[1;32m◇ @BotFather'dan Aldığınız Bot Token'ını Girin\033[1;37m: "; read token
+    echo ""
+    
+    # Kullanıcıdan Telegram ID'sini iste.
+    echo -ne "\033[1;32m◇ Telegram ID'nizi Girin\033[1;37m: "; read idtelegram
+    
+    # Bot'un bulunduğu dizine git.
+    cd /etc/VPSManager
+    
+    # Bot script'ini 'bot_gen' adıyla yeni bir screen oturumunda başlat.
+    # Token ve ID, script'e argüman olarak verilir.
+    screen -dmS bot_gen ./botgerador $token $idtelegram > /dev/null 2>&1
+    
+    # Bot'un sistem yeniden başladığında otomatik olarak çalışması için /etc/autostart dosyasına ekle.
+    if [[ $(grep -wc "bot_gen" /etc/autostart) = '0' ]]; then
+        # Eğer satır yoksa, ekle.
+        echo -e "ps x | grep 'bot_gen' | grep -v 'grep' || (cd /etc/VPSManager && sudo screen -dmS bot_gen ./botgerador $token $idtelegram && cd $HOME)" >> /etc/autostart
+    else
+        # Eğer satır zaten varsa, eskisini silip yenisini (güncel token/ID ile) ekle.
+        sed -i '/bot_gen/d' /etc/autostart
+        echo -e "ps x | grep 'bot_gen' | grep -v 'grep' || (cd /etc/VPSManager && sudo screen -dmS bot_gen ./botgerador $token $idtelegram && cd $HOME)" >> /etc/autostart
+    fi
+    
+    # Başarı mesajını göster.
+    clear && echo "◇ BOT BAŞARIYLA AKTİF EDİLDİ!"
+
+else
+    # --- BOT DEVRE DIŞI BIRAKMA BÖLÜMÜ ---
+    # Eğer 'bot_gen' screen oturumu zaten çalışıyorsa, onu sonlandır.
+    screen -r -S "bot_gen" -X quit
+    
+    # Başarı mesajını göster.
+    clear && echo "◇ BOT BAŞARIYLA DEVRE DIŞI BIRAKILDI!"
+fi

@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# --- FONKSİYON: Süresi dolan kullanıcıları sayar ---
+fun_exp () {
+( # Komutları arka planda bir alt kabukta çalıştır
+    
+    # Sistemdeki normal kullanıcılar (UID >= 1000) için bir döngü başlat.
+    for _user in $(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody); do
+    
+        # Kullanıcının son kullanma tarihini kontrol et.
+        if [[ $(chage -l $_user | grep "Account expires" | awk -F ': ' '{print $2}') != never ]]; then
+            
+            # Eğer şu anki zaman, kullanıcının son kullanma tarihini geçmişse...
+            # 'date +%s' komutu zamanı saniye cinsinden verir.
+            if [[ $(date +%s) -gt $(date '+%s' -d"$(chage -l $_user | grep "Account expires" | awk -F ': ' '{print $2}')") ]]; then
+                # ...süresi dolan kullanıcı sayacını bir artır.
+                userexp=$(expr $userexp + 1)
+            fi
+        fi
+    done
+    
+    # Sayacı /etc/VPSManager/Exp dosyasına yaz.
+    echo "$userexp" > /etc/VPSManager/Exp
+
+) & # Fonksiyonu arka planda çalıştır.
+}
+
+# Fonksiyonu çağır ve tüm çıktılarını gizle (sessiz modda çalıştır).
+fun_exp > /dev/null 2>&1

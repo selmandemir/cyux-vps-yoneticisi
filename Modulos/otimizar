@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# --- FONKSİYON: Arka planda bir komut çalışırken "Lütfen Bekleyin" animasyonu gösterir ---
+fun_bar() {
+    comando[0]="$1"
+    comando[1]="$2"
+    (
+        [[ -e $HOME/fim ]] && rm $HOME/fim
+        ${comando[0]} -y >/dev/null 2>&1
+        ${comando[1]} -y >/dev/null 2>&1
+        touch $HOME/fim
+    ) >/dev/null 2>&1 &
+    tput civis
+    echo -ne "\033[1;33m["
+    while true; do
+        for ((i = 0; i < 18; i++)); do
+            echo -ne "\033[1;31m#"
+            sleep 0.1s
+        done
+        [[ -e $HOME/fim ]] && rm $HOME/fim && break
+        echo -e "\033[1;33m]"
+        sleep 1s
+        tput cuu1
+        tput dl1
+        echo -ne "\033[1;33m["
+    done
+    echo -e "\033[1;33m]\033[1;37m -\033[1;32m TAMAM !\033[1;37m"
+    tput cnorm
+}
+
+clear
+# Başlık metnini mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+echo -e "\E[44;1;37m           🐉ㅤSunucu Optimizasyonuㅤ🐉           \E[0m"
+echo ""
+
+# --- Paket Yönetimi ---
+echo -e "\033[1;32m           ◇ Paketler güncelleniyor\033[0m"
+echo ""
+fun_bar 'apt-get update -y' 'apt-get upgrade -y'
+echo ""
+echo -e "\033[1;32m       ◇ Bağımlılık sorunları düzeltiliyor"
+echo ""
+fun_bar 'apt-get -f install'
+echo ""
+echo -e "\033[1;32m         ◇ Gereksiz paketler kaldırılıyor"
+echo ""
+fun_bar 'apt-get autoremove -y' 'apt-get autoclean -y'
+echo ""
+echo -e "\033[1;32m       ◇ Sorunlu paketler kaldırılıyor"
+echo ""
+fun_bar 'apt-get -f remove -y' 'apt-get clean -y'
+
+# --- RAM Bellek Temizliği ---
+clear
+echo -e "\033[1;31m◇────────────────────────────────────────────────◇\033[0m"
+echo ""
+
+# Temizlikten önceki RAM ve SWAP durumunu al.
+MEM1=$(free | awk '/Mem:/ {print int(100*$3/$2)}')
+ram1=$(free -h | grep -i mem | awk {'print $2'})
+ram2=$(free -h | grep -i mem | awk {'print $4'})
+ram3=$(free -h | grep -i mem | awk {'print $3'})
+swap1=$(free -h | grep -i swap | awk {'print $2'})
+swap2=$(free -h | grep -i swap | awk {'print $4'})
+swap3=$(free -h | grep -i swap | awk {'print $3'})
+
+# Temizlikten önceki durumu ekrana yazdır.
+echo -e "\033[1;31m•\033[1;32m◇ Önce\033[1;31m•\033[0m                            \033[1;31m•\033[1;32m◇ Sonra (Tahmini)\033[1;31m•\033[0m"
+echo -e " \033[1;33m◇ Toplam RAM: \033[1;37m$ram1                   \033[1;33m◇ Toplam SWAP: \033[1;37m$swap1"
+echo -e " \033[1;33m◇ Kullanımda: \033[1;37m$ram3                    \033[1;33m◇ Kullanımda: \033[1;37m$swap3"
+echo -e " \033[1;33m◇ Boşta: \033[1;37m$ram2                     \033[1;33m◇ Boşta: \033[1;37m$swap2\033[0m"
+echo ""
+echo -e "\033[1;37m◇ Optimizasyon Öncesi \033[1;32mRAM \033[1;37mKullanımı:\033[1;36m" $MEM1%
+echo ""
+echo -e "\033[1;31m◇────────────────────────────────────────────────◇\033[0m"
+sleep 2
+echo ""
+
+# RAM ve SWAP belleğini temizleyen fonksiyon.
+fun_limpram() {
+    sync
+    echo 3 >/proc/sys/vm/drop_caches
+    sync && sysctl -w vm.drop_caches=3 >/dev/null 2>&1
+    sysctl -w vm.drop_caches=0 >/dev/null 2>&1
+    swapoff -a
+    swapon -a
+    sleep 4
+}
+
+# Temizlik sırasında bekleme animasyonu gösteren fonksiyon.
+function aguarde() {
+    sleep 1
+    helice() {
+        fun_limpram >/dev/null 2>&1 &
+        tput civis
+        while [ -d /proc/$! ]; do
+            for i in / - \\ \|; do
+                sleep .1
+                echo -ne "\e[1D$i"
+            done
+        done
+        tput cnorm
+    }
+    echo -ne "\033[1;37m◇ \033[1;32mRAM \033[1;37mve \033[1;32mSWAP \033[1;37mBelleği Temizleniyor\033[1;32m.\033[1;33m.\033[1;31m. \033[1;33m"
+    helice
+    echo -e "\e[1DTamam"
+}
+aguarde
+sleep 1
+clear
+
+# --- Sonuç Ekranı ---
+echo -e "\033[1;32m◇────────────────────────────────────────────────◇\033[0m"
+echo ""
+
+# Temizlikten sonraki RAM ve SWAP durumunu al.
+MEM2=$(free | awk '/Mem:/ {print int(100*$3/$2)}')
+ram1=$(free -h | grep -i mem | awk {'print $2'})
+ram2=$(free -h | grep -i mem | awk {'print $4'})
+ram3=$(free -h | grep -i mem | awk {'print $3'})
+swap1=$(free -h | grep -i swap | awk {'print $2'})
+swap2=$(free -h | grep -i swap | awk {'print $4'})
+swap3=$(free -h | grep -i swap | awk {'print $3'})
+
+# Temizlikten sonraki durumu ekrana yazdır.
+echo -e "\033[1;31m•\033[1;32m◇ Önce (Tahmini)\033[1;31m•\033[0m                 \033[1;31m•\033[1;32m◇ Sonra\033[1;31m•\033[0m"
+echo -e " \033[1;33m◇ Toplam RAM: \033[1;37m$ram1                   \033[1;33m◇ Toplam SWAP: \033[1;37m$swap1"
+echo -e " \033[1;33m◇ Kullanımda: \033[1;37m$ram3                    \033[1;33m◇ Kullanımda: \033[1;37m$swap3"
+echo -e " \033[1;33m◇ Boşta: \033[1;37m$ram2                     \033[1;33m◇ Boşta: \033[1;37m$swap2\033[0m"
+echo ""
+echo -e "\033[1;37m◇ Optimize Edilmiş \033[1;32mRAM \033[1;37mKullanım Yüzdesi:\033[1;36m" $MEM2%
+echo ""
+# Sağlanan tasarrufu hesapla ve göster.
+echo -e "\033[1;37m◇ Tasarruf Edilen Miktar:\033[1;31m $(expr $MEM1 - $MEM2)%\033[0m"
+echo ""
+echo -e "\033[1;32m◇────────────────────────────────────────────────◇\033[0m"

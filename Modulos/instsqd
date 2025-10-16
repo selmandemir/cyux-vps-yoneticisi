@@ -1,0 +1,73 @@
+#!/bin/bash
+clear
+
+# Betiğe verilen ilk argümanı 'op' değişkenine ata (örneğin: ./betik.sh 1)
+op=$1
+
+# Eğer /usr/share/.hehe dizini yoksa, betiği sonlandır (Bu bir kontrol mekanizmasıdır)
+[[ ! -d /usr/share/.hehe ]] && exit 0
+
+## --- FONKSİYON 1: Eski Squid sürümünü kaldırır ve varsayılanı kurar ---
+fun_sqd01() {
+    # Eğer Ubuntu'nun eski (trusty) depo listesi varsa, onu sil.
+    [[ -e /etc/apt/sources.list.d/trusty_sources.list ]] && {
+        rm /etc/apt/sources.list.d/trusty_sources.list >/dev/null 2>&1
+        
+        # Eğer sistem Debian ise, eski depo için eklenen güvenlik anahtarını sil.
+        [[ $(grep -wc 'Debian' /etc/issue.net) != '0' ]] && {
+            apt-key del 3B4FE6ACC0B21F32 >/dev/null 2>&1
+        }
+        
+        # Belirtilen eski squid sürümlerini sistemden kaldır.
+        apt remove squid3=3.3.8-1ubuntu6 squid=3.3.8-1ubuntu6 squid3-common=3.3.8-1ubuntu6 -y >/dev/null 2>&1
+        
+        # Paket listesini güncelle ve gereksiz paketleri temizle.
+        apt update -y >/dev/null 2>&1
+        apt autoremove -y >/dev/null 2>&1
+    }
+    
+    # Temizlik yapıldıktan sonra, sistemin kendi deposundaki varsayılan squid3'ü kur.
+    apt install squid3 -y >/dev/null 2>&1
+}
+
+## --- FONKSİYON 2: Belirli bir eski Squid sürümünü (3.3.8) kurar ---
+fun_sqd02() {
+    # Eğer Ubuntu'nun eski (trusty) depo listesi yoksa, oluştur.
+    [[ ! -e /etc/apt/sources.list.d/trusty_sources.list ]] && {
+        touch /etc/apt/sources.list.d/trusty_sources.list >/dev/null 2>&1
+        # Oluşturulan dosyaya eski Ubuntu deposunun adresini yaz.
+        echo "deb http://us.archive.ubuntu.com/ubuntu/ trusty main universe" | tee --append /etc/apt/sources.list.d/trusty_sources.list >/dev/null 2>&1
+    }
+    
+    # Eğer sistem Debian ise, bu eski depoya güvenilmesi için gereken güvenlik anahtarını ekle.
+    [[ $(grep -wc 'Debian' /etc/issue.net) != '0' ]] && {
+        apt install dirmngr -y >/dev/null 2>&1
+        [[ $(apt-key list 2>/dev/null | grep -c 'Ubuntu') == '0' ]] && {
+            apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 >/dev/null 2>&1
+        }
+    }
+    
+    # Yeni depo eklendiği için paket listesini güncelle.
+    apt update -y >/dev/null 2>&1
+    
+    # Tam olarak hedeflenen eski squid3 sürümünü kur.
+    apt install squid3=3.3.8-1ubuntu6 squid=3.3.8-1ubuntu6 squid3-common=3.3.8-1ubuntu6 -y >/dev/null 2>&1
+    
+    # Bu eski sürümle uyumlu, özel bir servis başlangıç dosyasını internetten indir.
+    wget -qO- https://raw.githubusercontent.com/januda-ui/DRAGON-VPS-MANAGER/main/Install/squid3 >/etc/init.d/squid3
+    
+    # İndirilen servis dosyasına çalıştırma izni ver.
+    chmod +x /etc/init.d/squid3 >/dev/null 2>&1
+    
+    # Squid servisini sistem başlangıcına ekle ki sunucu yeniden başlayınca otomatik çalışsın.
+    update-rc.d squid3 defaults >/dev/null 2>&1
+}
+
+## --- ANA MANTIK ---
+# Eğer betiğe verilen argüman '1' ise, eski sürümü kuran fun_sqd02'yi çalıştır.
+# Eğer argüman '1' değilse veya hiç argüman verilmediyse, temizlik yapan fun_sqd01'i çalıştır.
+if [[ $op == '1' ]]; then
+    fun_sqd02
+else
+    fun_sqd01
+fi

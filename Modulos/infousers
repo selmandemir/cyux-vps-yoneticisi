@@ -1,0 +1,74 @@
+#!/bin/bash
+clear
+# Başlık satırını mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+echo -e "\E[44;1;37m◇Kullanıcı      ◇Şifre        ◇Limit   ◇Geçerlilik \E[0m"
+echo ""
+
+# Sistemdeki normal kullanıcıları (UID'si 900'den büyük olanlar) listelemek için bir döngü başlat.
+# 'nobody', 'polkitd' gibi sistem kullanıcıları hariç tutulur.
+for users in `awk -F : '$3 > 900 { print $1 }' /etc/passwd |sort |grep -v "nobody" |grep -vi polkitd |grep -vi system-`
+do
+    # Kullanıcının bağlantı limitini veritabanı dosyasından oku.
+    if [[ $(grep -cw $users $HOME/usuarios.db) == "1" ]]; then
+        lim=$(grep -w $users $HOME/usuarios.db | cut -d' ' -f2)
+    else
+        # Eğer kayıt yoksa, limiti '1' olarak varsay.
+        lim="1"
+    fi
+
+    # Kullanıcının şifresini /etc/VPSManager/senha/ dizinindeki dosyadan oku.
+    if [[ -e "/etc/VPSManager/senha/$users" ]]; then
+        senha=$(cat /etc/VPSManager/senha/$users)
+    else
+        # Eğer şifre dosyası yoksa 'Bilinmiyor' olarak belirt.
+        senha="Bilinmiyor"
+    fi
+
+    # Kullanıcının son kullanma tarihini 'chage' komutuyla al.
+    datauser=$(chage -l $users |grep -i co |awk -F : '{print $2}')
+    
+    # Tarih bilgisini işle ve formatla.
+    if [ "$datauser" = never ] 2> /dev/null; then
+        # Eğer hesabın süresi "hiçbir zaman" dolmuyorsa.
+        data="\033[1;33mSüresiz\033[0m"
+    else
+        databr="$(date -d "$datauser" +"%Y%m%d")"
+        hoje="$(date -d today +"%Y%m%d")"
+        if [ $hoje -ge $databr ]; then
+            # Eğer tarih geçmişse.
+            data="\033[1;31mSüresi Doldu\033[0m"
+        else
+            # Eğer hala geçerliyse, kalan gün sayısını hesapla.
+            dat="$(date -d"$datauser" '+%Y-%m-%d')"
+            data=$(echo -e "$((($(date -ud $dat +%s)-$(date -ud $(date +%Y-%m-%d) +%s))/86400)) \033[1;37mGün Kaldı\033[0m")
+        fi
+    fi
+    
+    # Çıktıyı düzgün bir tablo formatında göstermek için değişkenleri formatla.
+    Kullanici=$(printf ' %-15s' "$users")
+    Sifre=$(printf '%-13s' "$senha")
+    Limit=$(printf '%-8s' "$lim")
+    Gecerlilik=$(printf '%-1s' "$data")
+    
+    # Kullanıcı bilgilerini ekrana yazdır.
+    echo -e "\033[1;33m$Kullanici \033[1;37m$Sifre \033[1;37m$Limit \033[1;32m$Gecerlilik\033[0m"
+    echo -e "\033[0;34m◇────────────────────────────────────────────────◇\033[0m"
+done
+echo ""
+
+# --- Özet Bilgiler ---
+# Toplam kullanıcı sayısını hesapla.
+_tuser=$(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody | wc -l)
+# Aktif SSH bağlantı sayısını hesapla.
+_ons=$(ps -x | grep sshd | grep -v root | grep priv | wc -l)
+# Süresi dolmuş kullanıcı sayısını dosyadan oku.
+[[ "$(cat /etc/VPSManager/Exp)" != "" ]] && _expuser=$(cat /etc/VPSManager/Exp) || _expuser="0"
+# Aktif OpenVPN bağlantı sayısını hesapla.
+[[ -e /etc/openvpn/openvpn-status.log ]] && _onop=$(grep -c "10.8.0" /etc/openvpn/openvpn-status.log) || _onop="0"
+# Aktif Dropbear bağlantı sayısını hesapla.
+[[ -e /etc/default/dropbear ]] && _drp=$(ps aux | grep dropbear | grep -v grep | wc -l) _ondrp=$(($_drp - 1)) || _ondrp="0"
+# Toplam çevrimiçi kullanıcı sayısını hesapla.
+_onli=$(($_ons + $_onop + $_ondrp))
+
+# Özet bilgileri ekrana yazdır.
+echo -e "\033[1;33m◇ \033[1;36mTOPLAM KULLANICI\033[1;37m $_tuser \033[1;33m◇ \033[1;32mÇEVRİMİÇİ\033[1;37m: $_onli \033[1;33m◇ \033[1;31mSÜRESİ DOLAN\033[1;37m: $_expuser \033[1;33m◇\033[0m"

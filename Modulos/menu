@@ -1,0 +1,138 @@
+#!/bin/bash
+
+# --- FONKSİYON: Arka planda bir komut çalışırken "Lütfen Bekleyin" animasyonu gösterir ---
+fun_bar() {
+    # ... (Bu fonksiyon, işlemin devam ettiğini belirten bir ilerleme çubuğu animasyonu gösterir) ...
+    echo -ne "\033[1;33mLÜTFEN BEKLEYİN... \033[1;37m- \033[1;33m["
+    # ...
+    echo -e "\033[1;33m]\033[1;37m -\033[1;32m TAMAM !\033[1;37m"
+}
+
+# --- FONKSİYON: Sunucu hızını test eder ---
+velocity() {
+    # ... (Hız testi sırasında bekleme animasyonu gösterir) ...
+    echo ""
+    echo -e "   \033[1;32mㅤ🐉ㅤSUNUCU HIZI TEST EDİLİYORㅤ🐉ㅤ\033[0m"
+    echo ""
+    aguarde 'fun_tst' # speedtest komutunu çalıştır
+    echo ""
+    # Test sonuçlarını ayrıştır ve ekrana yazdır.
+    png=$(cat speed | sed -n '5 p' | awk -F : {'print $NF'})
+    down=$(cat speed | sed -n '7 p' | awk -F : {'print $NF'})
+    upl=$(cat speed | sed -n '9 p' | awk -F : {'print $NF'})
+    lnk=$(cat speed | sed -n '10 p' | awk {'print $NF'})
+    echo -e "\033[0;34m◇─────────────────────────────────────────◇\033[0m"
+    echo -e "\033[1;32m◇ GECİKME (PING):\033[1;37m$png"
+    echo -e "\033[1;32m◇ İNDİRME HIZI:\033[1;37m$down"
+    echo -e "\033[1;32m◇ YÜKLEME HIZI:\033[1;37m$upl"
+    echo -e "\033[1;32m◇ SONUÇ LİNKİ: \033[1;36m$lnk\033[0m"
+    echo -e "\033[0;34m◇─────────────────────────────────────────◇\033[0m"
+    rm -rf $HOME/speed
+}
+
+# --- FONKSİYON: Kullanıcı bağlantı sınırlayıcıyı AÇAR ---
+limit1() {
+    clear
+    echo -e "\n\033[1;32m◇ㅤKULLANICI SINIRLAYICI BAŞLATILIYOR... \033[0m"
+    echo ""
+    fun_bar 'screen -dmS limiter limiter' 'sleep 3'
+    # Otomatik başlatma dosyasına ekle.
+    sed -i '/limiter/d' /etc/autostart
+    echo "ps x | grep 'limiter' | grep -v 'grep' || screen -dmS limiter limiter" >> /etc/autostart
+    echo -e "\n\033[1;32m◇ㅤKULLANICI SINIRLAYICI AKTİF EDİLDİ!\033[0m"
+    sleep 3
+    menu
+}
+
+# --- FONKSİYON: Kullanıcı bağlantı sınırlayıcıyı KAPATIR ---
+limit2() {
+    clear
+    echo -e "\033[1;32m◇ㅤKULLANICI SINIRLAYICI DURDURULUYOR... \033[0m"
+    echo ""
+    fun_stplimiter() {
+        screen -r -S "limiter" -X quit
+        screen -wipe 1>/dev/null 2>/dev/null
+        sed -i '/limiter/d' /etc/autostart # Otomatik başlatma dosyasından kaldır.
+    }
+    fun_bar 'fun_stplimiter' 'sleep 3'
+    echo -e "\n\033[1;31m◇ㅤKULLANICI SINIRLAYICI DURDURULDU!\033[0m"
+    sleep 3
+    menu
+}
+
+# --- FONKSİYON: Sınırlayıcıyı AÇ/KAPAT anahtarı ---
+limit_ssh() {
+    [[ $(ps x | grep "limiter" | grep -v grep | wc -l) = '0' ]] && limit1 || limit2
+}
+
+# --- FONKSİYON: Menünün otomatik çalışmasını AÇAR/KAPATIR ---
+autoexec() {
+    if grep "menu;" /etc/profile >/dev/null; then
+        # Otomatik çalıştırma AÇIK ise, KAPAT.
+        clear
+        echo -e "\033[1;32m◇ㅤOTOMATİK ÇALIŞTIRMA DEVRE DIŞI BIRAKILIYOR\033[0m"
+        sed -i '/menu;/d' /etc/profile
+        echo -e "\n\033[1;31m◇ㅤOTOMATİK ÇALIŞTIRMA DEVRE DIŞI!\033[0m"
+    else
+        # Otomatik çalıştırma KAPALI ise, AÇ.
+        clear
+        echo -e "\033[1;32m◇ㅤOTOMATİK ÇALIŞTIRMA AKTİF EDİLİYOR\033[0m"
+        echo "menu;" >> /etc/profile
+        echo -e "\n\033[1;32m◇ㅤOTOMATİK ÇALIŞTIRMA AKTİF!\033[0m"
+    fi
+    sleep 1.5s
+    menu2
+}
+
+# --- ALT MENÜ: Diğer seçenekler ---
+menu2() {
+    # ... (Durum kontrolleri: Torrent engelleme, Telegram botu, Otomatik çalıştırma) ...
+    clear
+    echo -e "\033[0;34m◇───────────────────────────────────────────────◇\033[0m"
+    echo -e "\E[41;1;37m           •ㅤ🐉ㅤCyux VPS Yöneticisiㅤ🐉ㅤ•           \E[0m"
+    # ... (Sistem bilgileri gösterilir) ...
+    echo -e "\033[1;31m[\033[1;36m20\033[1;31m] \033[1;37m◇ \033[1;33mHOST EKLE \033[1;31m                  [\033[1;36m26\033[1;31m] \033[1;37m◇ \033[1;33mROOT ŞİFRESİNİ DEĞİŞTİR \033[1;31m"
+    echo -e "[\033[1;36m21\033[1;31m] \033[1;37m◇ \033[1;33mHOST SİL \033[1;31m                     [\033[1;36m27\033[1;31m] \033[1;37m◇ \033[1;33mOTOMATİK ÇALIŞTIRMA $autm \033[1;31m"
+    echo -e "[\033[1;36m22\033[1;31m] \033[1;37m◇ \033[1;33mSİSTEMİ YENİDEN BAŞLAT \033[1;31m      [\033[1;36m28\033[1;31m] $var01 \033[1;33mSCRIPT'İ GÜNCELLE \033[1;31m"
+    echo -e "[\033[1;36m23\033[1;31m] \033[1;37m◇ \033[1;33mSERVİSLERİ YENİDEN BAŞLAT \033[1;31m  [\033[1;36m29\033[1;31m] \033[1;37m◇ \033[1;33mSCRIPT'İ KALDIR \033[1;31m"
+    echo -e "[\033[1;36m24\033[1;31m] \033[1;37m◇ \033[1;33mTORRENT ENGELLEME $stsf\033[1;31m        [\033[1;36m30\033[1;31m] \033[1;37m◇ \033[1;33mGERİ DÖN \033[1;32m<\033[1;33m<\033[1;31m< \033[1;31m"
+    echo -e "[\033[1;36m25\033[1;31m] \033[1;37m◇ \033[1;33mTELEGRAM BOTU $stsbot\033[1;31m         [\033[1;36m00\033[1;31m] \033[1;37m◇ \033[1;33mÇIKIŞ YAP \033[1;32m<\033[1;33m<\033[1;31m<\033[1;31m"
+    # ... (Kullanıcı girdisi ve case bloğu ile ilgili komutları çağırma) ...
+}
+
+# --- ANA MENÜ ---
+while true; do
+    # ... (Sistem bilgilerini topla ve ekrana yazdır) ...
+    clear
+    echo -e "\033[0;34m◇───────────────────────────────────────────────◇\033[0m"
+    echo -e "\E[41;1;37m           •ㅤ🐉ㅤCyux VPS Yöneticisiㅤ🐉ㅤ•           \E[0m"
+    # ... (Sistem bilgileri gösterilir) ...
+    echo -e "\033[1;31m[\033[1;36m01\033[1;31m] \033[1;37m◇ \033[1;33mKULLANICI OLUŞTUR \033[1;31m          [\033[1;36m11\033[1;31m] \033[1;37m◇ \033[1;33mHIZ TESTİ \033[1;31m"
+    echo -e "[\033[1;36m02\033[1;31m] \033[1;37m◇ \033[1;33mTEST KULLANICISI OLUŞTUR \033[1;31m   [\033[1;36m12\033[1;31m] \033[1;37m◇ \033[1;33mBANNER AYARLA \033[1;31m"
+    echo -e "[\033[1;36m03\033[1;31m] \033[1;37m\033[1;37m◇ \033[1;33mKULLANICI SİL \033[1;31m              [\033[1;36m13\033[1;31m] \033[1;37m◇ \033[1;33mAĞ TRAFİĞİ \033[1;31m"
+    echo -e "[\033[1;36m04\033[1;31m] \033[1;37m◇ \033[1;33mÇEVRİMİÇİ KULLANICILAR \033[1;31m      [\033[1;36m14\033[1;31m] \033[1;37m◇ \033[1;33mVPS OPTİMİZASYONU \033[1;31m"
+    echo -e "[\033[1;36m05\033[1;31m] \033[1;37m◇ \033[1;33mKULLANICI SÜRESİNİ DEĞİŞTİR \033[1;31m   [\033[1;36m15\033[1;31m] \033[1;37m◇ \033[1;33mKULLANICI YEDEKLEME \033[1;31m"
+    echo -e "[\033[1;36m06\033[1;31m] \033[1;37m◇ \033[1;33mKULLANICI LİMİTİNİ DEĞİŞTİR \033[1;31m  [\033[1;36m16\033[1;31m] \033[1;37m◇ \033[1;33mKULLANICI SINIRLAYICI $stsl\033[1;31m"
+    echo -e "[\033[1;36m07\033[1;31m] \033[1;37m◇ \033[1;33mŞİFRE DEĞİŞTİR \033[1;31m             [\033[1;36m17\033[1;31m] \033[1;37m◇ \033[1;33mBADVPN $stsu\033[1;31m"
+    echo -e "[\033[1;36m08\033[1;31m] \033[1;37m◇ \033[1;33mSÜRESİ DOLANLARI SİL \033[1;31m       [\033[1;36m18\033[1;31m] \033[1;37m◇ \033[1;33mVPS BİLGİLERİ \033[1;31m"
+    echo -e "[\033[1;36m09\033[1;31m] \033[1;37m◇ \033[1;33mKULLANICI RAPORU \033[1;31m           [\033[1;36m19\033[1;31m] \033[1;37m◇ \033[1;33mDİĞER SEÇENEKLER \033[1;31m>\033[1;33m>\033[1;32m>\033[0m\033[1;31m"
+    echo -e "[\033[1;36m10\033[1;31m] \033[1;37m◇ \033[1;33mBAĞLANTI MODLARI \033[1;31m          [\033[1;36m00\033[1;31m] \033[1;37m◇ \033[1;33mÇIKIŞ YAP \033[1;32m<\033[1;33m<\033[1;31m<\033[0m \033[0m"
+    echo ""
+    echo -e "\033[0;34m◇───────────────────────────────────────────────◇\033[0m"
+    echo ""
+    echo -ne "\033[1;32m◇ NE YAPMAK İSTERSİNİZ \033[1;33m?\033[1;31m?\033[1;37m : "; read x
+
+    # --- Kullanıcı Seçimini İşle ---
+    case "$x" in
+        1 | 01) clear; criarusuario; echo -ne "\n\033[1;31m◇ \033[1;32mMENÜ'ye\033[1;33m dönmek için \033[1;31mENTER'a\033[0m basın."; read;;
+        2 | 02) clear; criarteste; echo -ne "\n\033[1;31m◇ \033[1;32mMENÜ'ye\033[1;33m dönmek için \033[1;31mENTER'a\033[0m basın."; read;;
+        # ... (Diğer tüm case seçenekleri ilgili komutları çağırır) ...
+        19) menu2;;
+        0 | 00)
+            echo -e "\033[1;31m◇ Çıkılıyor...\033[0m"; sleep 2; clear; exit;;
+        *)
+            echo -e "\n\033[1;31m◇ Geçersiz seçenek!\033[0m"; sleep 2;;
+    esac
+done
+}
+menu

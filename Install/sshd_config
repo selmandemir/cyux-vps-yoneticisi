@@ -1,0 +1,80 @@
+# SSH sunucusunun bağlantıları dinleyeceği port numarası. 22 standart porttur.
+Port 22
+
+# Yalnızca daha güvenli olan SSH Protokol versiyon 2'nin kullanılmasına izin ver.
+Protocol 2
+
+# Sunucu anahtarının ne sıklıkla yeniden oluşturulacağını saniye cinsinden belirtir (1 saat).
+KeyRegenerationInterval 3600
+
+# Sunucu anahtarının bit uzunluğu. (Not: 1024 artık eski kabul edilir, 2048 veya üstü tavsiye edilir).
+ServerKeyBits 1024
+
+# SSH loglarının sistem günlüğünde hangi kategori altında tutulacağı (AUTH = Kimlik Doğrulama).
+SyslogFacility AUTH
+
+# Kaydedilecek logların detay seviyesi (INFO = Bilgilendirme seviyesi).
+LogLevel INFO
+
+# Bir kullanıcının şifresini girmesi için tanınan maksimum süre (120 saniye = 2 dakika).
+LoginGraceTime 120
+
+# "root" kullanıcısının SSH üzerinden doğrudan giriş yapmasına izin ver. (Güvenlik için 'no' yapılması önerilir).
+PermitRootLogin yes
+
+# SSH'ın, kullanıcının ev dizini ve .ssh klasörü gibi dosyaların izinlerini kontrol edip etmeyeceği.
+StrictModes yes
+
+# Eski tip RSA anahtarları ile kimlik doğrulamasına izin ver.
+RSAAuthentication yes
+
+# Açık anahtar (public key) ile şifresiz kimlik doğrulamasına izin ver.
+PubkeyAuthentication yes
+
+# Güvenli olmayan .rhosts ve .shosts dosyalarını yoksay.
+IgnoreRhosts yes
+
+# Güvenli olmayan RhostsRSA kimlik doğrulamasını devre dışı bırak.
+RhostsRSAAuthentication no
+
+# Host tabanlı kimlik doğrulamayı devre dışı bırak.
+HostbasedAuthentication no
+
+# Boş şifrelerle girişe izin verme.
+PermitEmptyPasswords no
+
+# SSH tünellemesine (VPN gibi) izin ver.
+PermitTunnel yes
+
+# Challenge-Response (Meydan Okuma-Yanıt) kimlik doğrulamasını devre dışı bırak.
+ChallengeResponseAuthentication no
+
+# Standart şifre ile kimlik doğrulamasına izin ver.
+PasswordAuthentication yes
+
+# Grafiksel arayüzlerin (GUI) SSH üzerinden yönlendirilmesine izin ver.
+X11Forwarding yes
+
+# X11 yönlendirmesi için başlangıç ekran numarası offset'i.
+X11DisplayOffset 10
+
+# Girişte "Günün Mesajı"nı (motd) gösterme.
+PrintMotd no
+
+# Girişte kullanıcının en son ne zaman bağlandığı bilgisini göster.
+PrintLastLog yes
+
+# Bağlantının aktif olup olmadığını kontrol etmek için TCP KeepAlive paketleri gönder.
+TCPKeepAlive yes
+
+# Bu satır bir yorum olduğu için etkisizdir.
+#UseLogin no
+
+# İstemciden gelen dil ve yerel ayar (LANG, LC_*) ortam değişkenlerini kabul et.
+AcceptEnv LANG LC_*
+
+# SFTP (Güvenli Dosya Transferi) bağlantıları için hangi programın kullanılacağını belirtir.
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+# Kimlik doğrulama için sistemin PAM (Pluggable Authentication Modules) modüllerini kullan.
+UsePAM yes

@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# 'bot_teste' adında bir screen oturumunun çalışıp çalışmadığını kontrol et.
+if [[ $(screen -list| grep -c 'bot_teste') == '0' ]]; then
+    # --- BOT AKTİVASYON BÖLÜMÜ ---
+    # Eğer bot çalışmıyorsa, aktivasyon menüsünü göster.
+    clear
+    echo -e "\E[44;1;37m◇     Cyux VPS SSH TEST BOTU AKTİVASYONU     \E[0m"
+    echo ""
+    
+    # Kullanıcıdan Telegram Bot Token'ını iste.
+    echo -ne "\033[1;32m◇ TELEGRAM BOT TOKEN'INIZI GİRİN\033[1;37m: "; read token
+    
+    # Botun bulunduğu dizine git.
+    cd /etc/VPSManager
+    
+    # Bot script'ini 'bot_teste' adıyla yeni bir screen oturumunda başlat.
+    screen -dmS bot_teste ./botsshteste $token > /dev/null 2>&1
+    
+    # Bot'un sistem yeniden başladığında otomatik olarak çalışması için /etc/autostart dosyasına ekle.
+    if [[ $(grep -wc "bot_teste" /etc/autostart) = '0' ]]; then
+        # Eğer satır yoksa, ekle.
+        echo -e "ps x | grep 'bot_teste' | grep -v 'grep' || (cd /etc/VPSManager && sudo screen -dmS bot_teste ./botsshteste $token && cd $HOME)" >>/etc/autostart
+    else
+        # Eğer satır zaten varsa, eskisini silip yenisini (güncel token ile) ekle.
+        sed -i '/bot_teste/d' /etc/autostart
+        echo -e "ps x | grep 'bot_teste' | grep -v 'grep' || (cd /etc/VPSManager && sudo screen -dmS bot_teste ./botsshteste $token && cd $HOME)" >>/etc/autostart
+    fi
+    
+    # Başarı mesajını göster.
+    clear && echo "◇ BOT AKTİF EDİLDİ!"
+
+else
+    # --- BOT DEVRE DIŞI BIRAKMA BÖLÜMÜ ---
+    # Eğer 'bot_teste' screen oturumu zaten çalışıyorsa, onu sonlandır.
+    screen -r -S "bot_teste" -X quit
+    
+    # Başarı mesajını göster.
+    clear && echo "◇ BOT DEVRE DIŞI BIRAKILDI!"
+fi

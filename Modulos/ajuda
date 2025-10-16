@@ -1,0 +1,39 @@
+#!/bin/bash
+clear
+# Başlık ve Geliştirici Bilgisi
+echo -e "           \033[1;31mGeliştiren:ㅤ🐉ㅤCyux VPS Yöneticisiㅤ🐉ㅤ\033[1;36m"
+# ASCII Sanatı ile Başlık
+echo "   Cyux VPS Yöneticisi" | figlet
+echo -e "\033[1;32m         BİLGİ VE SEÇENEKLER MENÜSÜ \033[0m\n\n"
+
+# Menü Seçenekleri
+echo -e " \033[1;37m[\033[1;31m01\033[1;37m] - \033[1;33mSSH Kullanıcısı Oluştur"
+echo -e " \033[1;37m[\033[1;31m02\033[1;37m] - \033[1;33mTest SSH Kullanıcısı Oluştur"
+echo -e " \033[1;37m[\033[1;31m03\033[1;37m] - \033[1;33mSSH Kullanıcısını Sil"
+echo -e " \033[1;37m[\033[1;31m04\033[1;37m] - \033[1;33mSSH ve Dropbear Kullanıcılarını İzle"
+echo -e " \033[1;37m[\033[1;31m05\033[1;37m] - \033[1;33mSSH Kullanıcısının Süresini Değiştir"
+echo -e " \033[1;37m[\033[1;31m06\033[1;37m] - \033[1;33mBağlantı Limitini Değiştir"
+echo -e " \033[1;37m[\033[1;31m07\033[1;37m] - \033[1;33mSSH Kullanıcı Şifresini Değiştir"
+echo -e " \033[1;37m[\033[1;31m08\033[1;37m] - \033[1;33mSüresi Dolan Tüm Kullanıcıları Sil"
+echo -e " \033[1;37m[\033[1;31m09\033[1;37m] - \033[1;33mBağlantı Sınırlayıcıyı Aktif Et"
+echo -e " \033[1;37m[\033[1;31m10\033[1;37m] - \033[1;33mBağlantı Modları (Squid, Dropbear vb.) \033[1;32mYENİ"
+echo -e " \033[1;37m[\033[1;31m11\033[1;37m] - \033[1;33mSunucu Hız Testi Yap \033[1;32mYENİ"
+echo -e " \033[1;37m[\033[1;31m12\033[1;37m] - \033[1;33mVPS İçin Giriş Banner'ı Ayarla"
+echo -e " \033[1;37m[\033[1;31m13\033[1;37m] - \033[1;33mHarcanan Ağ Trafiğini Göster"
+echo -e " \033[1;37m[\033[1;31m14\033[1;37m] - \033[1;33mTemizlik ve Hata Onarımı Yap \033[1;32mYENİ"
+echo -e " \033[1;37m[\033[1;31m15\033[1;37m] - \033[1;33mOpenVPN Kur"
+echo -e " \033[1;37m[\033[1;31m16\033[1;37m] - \033[1;33mKullanıcı Yedeği Oluştur"
+echo -e " \033[1;37m[\033[1;31m17\033[1;37m] - \033[1;33mVoIP Aramaları için BadVPN (UDP) Kur"
+echo -e " \033[1;37m[\033[1;31m18\033[1;37m] - \033[1;33mGecikmeyi İyileştir (Deneysel)"
+echo -e " \033[1;37m[\033[1;31m19\033[1;37m] - \033[1;33mİkinci Menüyü Göster"
+echo -e " \033[1;37m[\033[1;31m20\033[1;37m] - \033[1;33mSquid Bağlantısı için Host Ekle"
+echo -e " \033[1;37m[\033[1;31m21\033[1;37m] - \033[1;33mVPS'ten Host Sil"
+echo -e " \033[1;37m[\033[1;31m22\033[1;37m] - \033[1;33mSistemi Yeniden Başlat"
+echo -e " \033[1;37m[\033[1;31m23\033[1;37m] - \033[1;33mServisleri Yeniden Başlat (Squid, Dropbear vb.)"
+echo -e " \033[1;37m[\033[1;31m24\033[1;37m] - \033[1;33mVPS'i Telegram ile Yönetme Seçenekleri \033[1;32mYENİ"
+echo -e " \033[1;37m[\033[1;31m25\033[1;37m] - \033[1;33mVPS Bilgilerini Göster"
+echo -e " \033[1;37m[\033[1;31m26\033[1;37m] - \033[1;33mVPS Root Şifresini Değiştir"
+echo -e " \033[1;37m[\033[1;31m27\033[1;37m] - \033[1;33m🐉 Cyux VPS Yöneticisi Script'ini Güncelle"
+echo -e " \033[1;37m[\033[1;31m28\033[1;37m] - \033[1;33m🐉 Cyux VPS Yöneticisi Script'ini Kaldır"
+echo -e " \033[1;37m[\033[1;31m29\033[1;37m] - \033[1;33mScript Hakkında Bilgi Görüntüle"
+echo -e " \033[1;37m[\033[1;31m30\033[1;37m] - \033[1;33mÖnceki Menüye Dön\033[0m"

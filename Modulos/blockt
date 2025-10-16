@@ -1,0 +1,180 @@
+#!/bin/bash
+clear
+IP=$(wget -qO- ipv4.icanhazip.com)
+# Güvenlik duvarı kurallarının aktif olup olmadığını anlamak için bir kontrol dosyası tanımla.
+arq="/etc/Plus-torrent"
+
+# Başlık metnini mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+echo -e "\E[44;1;37m        ㅤ🐉ㅤTORRENT ENGELLEME GÜVENLİK DUVARIㅤ🐉ㅤ         \E[0m"
+echo ""
+
+# Eğer kontrol dosyası varsa (yani kurallar aktifse), kaldırma menüsünü göster.
+if [[ -e "$arq" ]]; then
+    # --- FONKSİYON: Tüm iptables kurallarını temizler (Güvenlik Duvarını Kapatır) ---
+    fun_fireoff () {
+        iptables -P INPUT ACCEPT
+        iptables -P OUTPUT ACCEPT
+        iptables -P FORWARD ACCEPT
+        iptables -t mangle -F
+        iptables -t mangle -X
+        iptables -t nat -F
+        iptables -t nat -X
+        iptables -t filter -F
+        iptables -t filter -X
+        iptables -F
+        iptables -X
+        rm $arq # Kontrol dosyasını sil
+        sleep 3
+    }
+    # --- FONKSİYON: Kuralları kaldırırken bekleme animasyonu gösterir ---
+    fun_spn1 () {
+        helice () {
+            fun_fireoff > /dev/null 2>&1 & 
+            tput civis # İmleci gizle
+            while [ -d /proc/$! ]; do
+                for i in / - \\ \|; do
+                    sleep .1
+                    echo -ne "\e[1D$i"
+                done
+            done
+            tput cnorm # İmleci görünür yap
+        }
+        echo -ne "\033[1;31m◇ GÜVENLİK DUVARI KALDIRILIYOR\033[1;32m.\033[1;33m.\033[1;31m. \033[1;32m"
+        helice
+        echo -e "\e[1DTamam"
+    }
+    
+    # Kullanıcıya kuralları kaldırmak isteyip istemediğini sor.
+    read -p "$(echo -e "\033[1;32m◇ GÜVENLİK DUVARI KURALLARINI KALDIRMAK İSTER MİSİNİZ? \033[1;33m[e/h]:\033[1;37m") " -e -i h resp
+    if [[ "$resp" = 'e' ]]; then
+        echo "" 
+        fun_spn1
+        echo ""
+        echo -e "\033[1;33m◇ TORRENT TRAFİĞİ SERBEST BIRAKILDI!\033[0m"
+        echo ""
+        echo -e "\033[1;32m◇ GÜVENLİK DUVARI BAŞARIYLA KALDIRILDI!"
+        echo ""
+        # Eğer OpenVPN kuruluysa, tamamlama için sistemi yeniden başlatmayı öner.
+        if [[ -e /etc/openvpn/openvpn-status.log ]]; then
+            echo -e "\033[1;31m[\033[1;33m!\033[1;31m]\033[1;33m◇ İŞLEMİ TAMAMLAMAK İÇİN SİSTEMİ YENİDEN BAŞLATIN"
+            echo ""
+            read -p "$(echo -e "\033[1;32m◇ ŞİMDİ YENİDEN BAŞLATILSIN MI \033[1;31m? \033[1;33m[e/h]:\033[1;37m ")" -e -i e respost
+            echo ""
+            if [[ "$respost" = 'e' ]]; then
+                echo -ne "\033[1;31m◇ Yeniden başlatılıyor" 
+                for i in $(seq 1 1 5); do
+                    echo -n "."
+                    sleep 1
+                done
+                reboot
+            fi
+        fi
+        sleep 2
+        menu
+    else
+        sleep 1
+        menu
+    fi
+else
+    # Eğer kontrol dosyası yoksa (yani kurallar aktif değilse), kurulum menüsünü göster.
+    echo -e "\033[1;31m[\033[1;33m!\033[1;31m]\033[1;33m BETA FONKSİYON, SORUMLULUK SİZE AİTTİR"
+    echo ""
+    read -p "$(echo -ne "\033[1;32m◇ GÜVENLİK DUVARI KURALLARINI UYGULAMAK İSTER MİSİNİZ ? \033[1;33m[e/h]:\033[1;37m") " -e -i h resp
+    if [[ "$resp" = 'e' ]]; then
+        echo ""
+        echo -ne "\033[1;33m◇ DEVAM ETMEK İÇİN IP ADRESİNİZİ DOĞRULAYIN: \033[1;37m"; read -e -i $IP IP
+        if [[ -z "$IP" ]]; then
+            echo ""
+            echo -e "\033[1;31m◇ Geçersiz IP\033[1;32m"
+            sleep 1
+            echo ""
+            read -p "◇ IP Adresinizi Girin: " IP
+        fi
+        echo ""
+        sleep 1
+        
+        # --- FONKSİYON: Torrent'i engelleyen iptables kurallarını oluşturur ---
+        fun_fireon () {
+            # Aktif olarak dinlenen portları bulan alt fonksiyon.
+            mportas () {
+                unset portas
+                portas_var=$(lsof -V -i tcp -P -n | grep -v "ESTABLISHED" |grep -v "COMMAND" | grep "LISTEN")
+                while read port; do
+                    var1=$(echo $port | awk '{print $1}') && var2=$(echo $port | awk '{print $9}' | awk -F ":" '{print $2}')
+                    [[ "$(echo -e $portas|grep "$var1 $var2")" ]] || portas+="$var1 $var2\n"
+                done <<< "$portas_var"
+                i=1
+                echo -e "$portas"
+            }
+            [[ $(iptables -h|wc -l) -lt 5 ]] && apt-get install iptables -y > /dev/null 2>-1
+            NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+            
+            # Kuralları /etc/Plus-torrent dosyasına yaz.
+            # Zaten kurulmuş ve ilişkili bağlantılara izin ver.
+            echo 'iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+            iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+            iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+            iptables -t filter -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT' > $arq
+            # DNS ve DHCP gibi temel servislere izin ver.
+            echo 'iptables -A OUTPUT -p tcp --dport 53 -m state --state NEW -j ACCEPT
+            iptables -A OUTPUT -p udp --dport 53 -m state --state NEW -j ACCEPT
+            iptables -A OUTPUT -p tcp --dport 67 -m state --state NEW -j ACCEPT
+            iptables -A OUTPUT -p udp --dport 67 -m state --state NEW -j ACCEPT' >> $arq
+            list_ips=$(mportas|awk '{print $2}')
+            # Sunucudaki tüm aktif servislere ait portlara izin ver.
+            while read PORT; do
+                echo "iptables -A INPUT -p tcp --dport $PORT -j ACCEPT
+                iptables -A INPUT -p udp --dport $PORT -j ACCEPT
+                iptables -A OUTPUT -p tcp --dport $PORT -j ACCEPT
+                iptables -A OUTPUT -p udp --dport $PORT -j ACCEPT" >> $arq
+            done <<< "$list_ips"
+            # Sunucuya ping (ICMP) isteklerini engelle.
+            echo 'iptables -A INPUT -p icmp --icmp-type echo-request -j DROP' >> $arq
+            # Torrent için yaygın olarak kullanılan port aralığını engelle/yönlendir.
+            echo "iptables -t nat -A PREROUTING -i $NIC -p tcp --dport 6881:6889 -j DNAT --to-dest $IP
+            iptables -A FORWARD -p tcp -i $NIC --dport 6881:6889 -d $IP -j REJECT
+            iptables -A OUTPUT -p tcp --dport 6881:6889 -j DROP
+            iptables -A OUTPUT -p udp --dport 6881:6889 -j DROP" >> $arq
+            # Paket içeriğinde BitTorrent ile ilgili anahtar kelimeleri ("BitTorrent", ".torrent", "peer_id" vb.) arayarak engelle.
+            echo 'iptables -A FORWARD -m string --algo bm --string "BitTorrent" -j DROP
+            iptables -A FORWARD -m string --algo bm --string "BitTorrent protocol" -j DROP
+            iptables -A FORWARD -m string --algo bm --string "peer_id=" -j DROP
+            iptables -A FORWARD -m string --algo bm --string ".torrent" -j DROP
+            iptables -A FORWARD -m string --algo bm --string "announce.php?passkey=" -j DROP
+            iptables -A FORWARD -m string --algo bm --string "torrent" -j DROP
+            iptables -A FORWARD -m string --algo bm --string "announce" -j DROP
+            iptables -A FORWARD -m string --algo bm --string "info_hash" -j DROP' >> $arq
+            sleep 2
+            chmod +x $arq
+            # Oluşturulan kuralları uygula.
+            /etc/Plus-torrent > /dev/null
+        }
+        # --- FONKSİYON: Kuralları uygularken bekleme animasyonu gösterir ---
+        fun_spn2 () {
+            helice () {
+                fun_fireon > /dev/null 2>&1 & 
+                tput civis
+                while [ -d /proc/$! ]; do
+                    for i in / - \\ \|; do
+                        sleep .1
+                        echo -ne "\e[1D$i"
+                    done
+                done
+                tput cnorm
+            }
+            echo -ne "\033[1;32m◇ GÜVENLİK DUVARI UYGULANIYOR\033[1;32m.\033[1;33m.\033[1;31m. \033[1;32m"
+            helice
+            echo -e "\e[1D◇ TAMAMLANDI."
+        }
+        fun_spn2
+        echo ""
+        echo -e "\033[1;33m◇ TORRENT\033[1;37m ENGELLEMESİ \033[1;33mUYGULANDI!\033[0m"
+        echo ""
+        echo -e "\033[1;32m◇ GÜVENLİK DUVARI BAŞARIYLA UYGULANDI!"
+        sleep 3
+        menu
+    else
+        sleep 1
+        menu
+    fi
+fi

@@ -1,0 +1,160 @@
+#!/bin/bash
+clear
+# Betiğin bir argümanla mı yoksa argümansız mı çalıştırıldığını kontrol et.
+backbot=$1
+
+# Eğer argümansız çalıştırıldıysa, interaktif menüyü göster.
+[[ -z $backbot ]] && {
+    IP=$(wget -qO- ipv4.icanhazip.com)
+    
+    # --- FONKSİYON: İndirme linki için Apache web sunucusunu kurar veya ayarlar ---
+    apchon () {
+        if netstat -nltp|grep 'apache2' > /dev/null; then
+            # Apache zaten kuruluysa, sadece gerekli dizinleri oluştur.
+            [[ ! -d /var/www/html ]] && mkdir /var/www/html
+            [[ ! -d /var/www/html/backup ]] && mkdir /var/www/html/backup
+            touch /var/www/html/backup/index.html
+            /etc/init.d/apache2 restart
+        else
+            # Apache kurulu değilse, kur ve ayarla.
+            apt-get install apache2 zip -y
+            sed -i "s/Listen 80/Listen 8888/g" /etc/apache2/ports.conf
+            service apache2 restart
+            [[ ! -d /var/www/html ]] && mkdir /var/www/html
+            [[ ! -d /var/www/html/backup ]] && mkdir /var/www/html/backup
+            touch /var/www/html/backup/index.html
+            chmod -R 755 /var/www
+            /etc/init.d/apache2 restart
+        fi
+    }
+    
+    # --- FONKSİYON: İşlem sırasında bekleme animasyonu gösterir ---
+    fun_temp () {
+        helice () {
+            apchon > /dev/null 2>&1 & 
+            tput civis
+            while [ -d /proc/$! ]; do
+                for i in / - \\ \|; do
+                    sleep .1; echo -ne "\e[1D$i"
+                done
+            done
+            tput cnorm
+        }
+        echo -ne "\033[1;33mLütfen Bekleyin...\033[1;31m.\033[1;32m.\033[1;33m. \033[1;32m"
+        helice
+        echo -e "\e[1DTamam"
+    }
+
+    # --- FONKSİYON: Yedek dosyasını web sunucusu dizinine kopyalar ---
+    geralink () {
+        if [ -d /var/www/html/backup ]; then
+            rm -rf /var/www/html/backup/backup.vps > /dev/null 2>&1
+            cp $HOME/backup.vps /var/www/html/backup/backup.vps
+            sleep 2
+        fi
+    }
+
+    # --- FONKSİYON: Link oluştururken bekleme animasyonu gösterir ---
+    fun_temp2 () {
+        helice () {
+            geralink > /dev/null 2>&1 & 
+            tput civis
+            while [ -d /proc/$! ]; do
+                for i in / - \\ \|; do
+                    sleep .1; echo -ne "\e[1D$i"
+                done
+            done
+            tput cnorm
+        }
+        echo -ne "\033[1;33mLİNK OLUŞTURULUYOR\033[1;31m.\033[1;32m.\033[1;33m. \033[1;32m"
+        helice
+        echo -e "\e[1DTamam"
+    }
+    
+    # --- Ana Menü ---
+    echo -e "\E[44;1;37m🐉ㅤ♻️ㅤYedekleme Yöneticisiㅤ♻️ㅤ🐉\E[0m"
+    echo ""
+    echo -e "\033[1;31m[\033[1;36m1\033[1;31m] \033[1;37m• \033[1;33mYEDEK OLUŞTUR"
+    echo -e "\033[1;31m[\033[1;36m2\033[1;31m] \033[1;37m• \033[1;33mYEDEĞİ GERİ YÜKLE"
+    echo -e "\033[1;31m[\033[1;36m3\033[1;31m] \033[1;37m• \033[1;33mGERİ DÖN\033[1;37m"
+    echo ""
+    echo -ne "\033[1;32mNE YAPMAK İSTERSİNİZ\033[1;31m ?\033[1;37m : "; read opcao
+    
+    # --- Seçenek 1: Yedek Oluşturma ---
+    if [[ "$opcao" = '1' ]]; then
+        # Kullanıcı veritabanı varsa devam et.
+        if [ -f "/root/usuarios.db" ]; then
+            rm -rf $HOME/backup.vps > /dev/null 2>&1
+            sleep 1
+            # Gerekli dosyaları bir .tar arşivi içine sıkıştır.
+            tar cvf /root/backup.vps /root/usuarios.db /etc/shadow /etc/passwd /etc/group /etc/gshadow /etc/VPSManager/senha > /dev/null 2>&1
+            echo ""
+            echo -e "\033[1;32m◇ YEDEK BAŞARIYLA OLUŞTURULDU!\033[0m"
+            echo ""
+            echo -ne "\033[1;32m◇ İNDİRME LİNKİ ALMAK İSTER MİSİNİZ \033[1;31m? \033[1;33m[e/h]:\033[1;37m "; read resp
+            if [[ "$resp" = "e" ]]; then
+                echo ""
+                fun_temp # Apache'yi kur/ayarla
+                echo ""
+                fun_temp2 # Linki oluştur
+                echo ""
+                if [ -e /var/www/html/backup/backup.vps ]; then
+                    echo -e "\033[1;32m◇ LİNK\033[1;37m: \033[1;36mhttp://$IP:8888/backup/backup.vps\033[0m"
+                else
+                    echo -e "\033[1;32m◇ Konumunda mevcut:\033[1;31m" ~/"backup.vps\033[0m"
+                fi
+            else
+                echo -e "\n\033[1;32m◇ Konumunda mevcut:\033[1;31m" ~/"backup.vps\033[0m"
+                sleep 2
+            fi
+        else
+            # Yedeklenecek dosya yoksa...
+            echo ""
+            echo -e "\033[1;32m◇ Yedek oluşturuluyor...\033[0m"
+            echo ""
+            tar cvf /root/backup.vps /etc/shadow /etc/passwd /etc/group /etc/gshadow /etc/VPSManager/senha > /dev/null 2>&1
+            sleep 2s
+            echo ""
+            echo -e "\033[1;33m◇ \033[1;32mbackup.vps \033[1;33mdosyası şu dizinde başarıyla oluşturuldu: \033[1;31m/root\033[0m"
+            echo ""
+        fi
+    fi
+    
+    # --- Seçenek 2: Yedek Geri Yükleme ---
+    if [[ "$opcao" = '2' ]]; then
+        if [ -f "/root/backup.vps" ]; then
+            echo ""
+            echo -e "\033[1;36m◇ Yedek geri yükleniyor..."
+            echo ""
+            sleep 2s
+            cp /root/backup.vps /backup.vps
+            cd /
+            tar -xvf backup.vps
+            rm /backup.vps
+            echo ""
+            echo -e "\033[1;36m◇ Kullanıcılar ve\033[1;36m şifreler başarıyla içe aktarıldı.\033[0m"
+            echo ""
+            exit
+        else
+            echo ""
+            echo -e "\033[1;33m◇ \033[1;32mbackup.vps \033[1;33mdosyası bulunamadı!\033[0m"
+            echo -e "\033[1;33mDosyanın /root/ dizininde \033[1;32mbackup.vps\033[1;33m adıyla bulunduğundan emin olun.\033[0m"
+            echo ""
+            exit
+        fi
+    fi
+    
+    # --- Seçenek 3: Geri Dön ---
+    if [[ "$opcao" = '3' ]]; then
+        menu
+    fi
+    
+} || {
+    # --- Argüman ile Çalıştırma (Otomatik Yedekleme) ---
+    # Bu bölüm, betik 'userbackup 1' gibi bir argümanla çalıştırıldığında tetiklenir.
+    # Muhtemelen Telegram botu veya zamanlanmış görev (cron) tarafından kullanılır.
+    rm /root/backup.vps 1>/dev/null 2>/dev/null
+    tar cvf /root/backup.vps /root/usuarios.db /etc/shadow /etc/passwd /etc/group /etc/gshadow /etc/bot /etc/VPSManager/senha > /dev/null 2>&1
+    [[ -d "/etc/VPSManager/backups" ]] && mv /root/backup.vps /etc/VPSManager/backups/backup.vps
+    exit
+}

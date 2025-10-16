@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Gerekli klasörler yoksa betiği sonlandır.
+[[ ! -d /etc/VPSManager ]] && exit 0
+[[ ! -d /etc/bot/revenda ]] && exit 0
+
+# /etc/bot/revenda dizinindeki her bir bayi için bir döngü başlat.
+for arq in $(ls /etc/bot/revenda); do
+
+    # Bayinin yapılandırma dosyasından kalan gün sayısını ('_diasR') oku.
+    _diasR=$(grep -w 'DIAS_REVENDA' /etc/bot/revenda/$arq/$arq | awk '{print $NF}')
+    
+    # --- ASKIYA ALMA MANTIĞI ---
+    # Eğer bayinin kalan günü '0' ise...
+    if [[ "$_diasR" -eq '0' ]]; then
+    
+        # --- Alt Bayileri Askıya Al ---
+        # Bayinin alt bayileri olup olmadığını kontrol et.
+        if [[ "$(grep -wc 'SUBREVENDA' /etc/bot/revenda/$arq/$arq)" != '0' ]]; then
+            # Her bir alt bayi için döngü başlat.
+            while read _listsub3; do
+                _usub3="$(echo $_listsub3 | awk '{print $2}')"
+                _dir_users="/etc/bot/revenda/$_usub3/usuarios"
+                
+                # Alt bayinin kullanıcıları varsa...
+                if [[ "$(ls $_dir_users | wc -l)" != '0' ]]; then
+                    # Her bir kullanıcıyı döngüye al.
+                    for _user in $(ls $_dir_users); do
+                        usermod -L $_user # Kullanıcı hesabını kilitle.
+                        pkill -U $_user   # Kullanıcının aktif tüm işlemlerini sonlandır.
+                    done
+                fi
+                
+                # Alt bayiyi askıya alınmışlar listesine ve klasörüne taşı.
+                if [[ $(grep -wc $_usub3 /etc/bot/lista_suspensos) == '0' ]]; then
+                    mv /etc/bot/revenda/$_usub3 /etc/bot/suspensos/$_usub3
+                    grep -w "$_usub3" /etc/bot/lista_ativos >>/etc/bot/lista_suspensos
+                fi
+            done <<< "$(grep -w 'SUBREVENDA' /etc/bot/revenda/$arq/$arq)"
+        fi
+        
+        # --- Ana Bayiyi Askıya Al ---
+        # Bayinin kendi kullanıcıları varsa...
+        if [[ "$(ls /etc/bot/revenda/$arq/usuarios | wc -l)" != '0' ]]; then
+            # Her bir kullanıcıyı döngüye al.
+            for _user in $(ls /etc/bot/revenda/$arq/usuarios); do
+                usermod -L $_user # Kullanıcı hesabını kilitle.
+                pkill -U $_user   # Kullanıcının aktif tüm işlemlerini sonlandır.
+            done
+        fi
+        
+        # Ana bayiyi askıya alınmışlar listesine ve klasörüne taşı.
+        if [[ $(grep -wc $arq /etc/bot/lista_suspensos) == '0' ]]; then
+            mv /etc/bot/revenda/$arq /etc/bot/suspensos/$arq
+            grep -w "$arq" /etc/bot/lista_ativos >>/etc/bot/lista_suspensos
+        fi
+        
+    # --- GÜN SAYISINI AZALTMA MANTIĞI ---
+    # Eğer bayinin kalan günü '0'dan büyükse...
+    else
+        # Kalan gün sayısını bir azalt.
+        _days=$(($_diasR - 1))
+        
+        # Hem aktif listesindeki hem de kendi yapılandırma dosyasındaki gün sayısını güncelle.
+        sed -i "/\b$arq\b/ s/DIAS: $_diasR/DIAS: $_days/" /etc/bot/lista_ativos
+        sed -i "/DIAS_REVENDA/ s/$_diasR/$_days/" /etc/bot/revenda/$arq/$arq
+        
+        # Loglama için ekrana bilgi yazdır (bu mesaj normalde bir log dosyasına yönlendirilir).
+        echo "$arq bayisinin günü $_diasR idi, $_days olarak değiştirildi."
+    fi
+done

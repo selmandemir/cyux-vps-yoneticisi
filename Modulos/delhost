@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Sunucuda hangi Squid sürümünün kurulu olduğunu kontrol et (squid veya squid3).
+if [ -d "/etc/squid/" ]; then
+    # Alan adlarının tutulduğu dosyanın yolunu belirle.
+    payload="/etc/squid/payload.txt"
+elif [ -d "/etc/squid3/" ]; then
+    payload="/etc/squid3/payload.txt"
+fi
+
+# Mavi arka plan üzerine beyaz ve kalın bir başlık yazdır.
+tput setaf 7 ; tput setab 4 ; tput bold ; printf '%35s%s%-10s\n' "ㅤ🐉ㅤSquid Proxy'den Host Silmeㅤ🐉ㅤ" ; tput sgr0
+
+# Payload dosyası mevcut değilse hata ver ve çık.
+if [ ! -f "$payload" ]; then
+    tput setaf 7 ; tput setab 4 ; tput bold ; echo "" ; echo "$payload Dosyası Bulunamadı" ; tput sgr0
+    exit 1
+else
+    # Eğer dosya mevcutsa, içindeki mevcut alan adlarını göster.
+    tput setaf 2 ; tput bold ; echo ""; echo "$payload dosyasındaki mevcut alan adları:" ; tput sgr0
+    tput setaf 3 ; tput bold ; echo "" ; cat $payload ; echo "" ; tput sgr0
+    
+    # Kullanıcıdan kaldırmak istediği alan adını girmesini iste.
+    read -p "Listeden kaldırmak istediğiniz alan adını girin: " host
+    
+    # Eğer kullanıcı hiçbir şey girmeden Enter'a basarsa...
+    if [[ -z $host ]]; then
+        tput setaf 7 ; tput setab 4 ; tput bold ; echo "" ; echo "Boş veya geçersiz bir alan adı girdiniz!" ; echo "" ; tput sgr0
+        exit 1
+    else
+        # Eğer girilen alan adı dosyada bulunmuyorsa...
+        if [[ `grep -c "^$host" $payload` -ne 1 ]]; then
+            tput setaf 7 ; tput setab 4 ; tput bold ; echo "" ; echo "$host alan adı $payload dosyasında bulunamadı" ; echo "" ; tput sgr0
+            exit 1
+        else
+            # Alan adını dosyadan sil (grep -v komutu belirtilen satır DIŞINDAKİ tüm satırları tutar).
+            grep -v "^$host" $payload > /tmp/a && mv /tmp/a $payload
+            
+            # Başarılı olduğuna dair mesaj göster ve dosyanın son halini yazdır.
+            tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo "$payload dosyası güncellendi, alan adı başarıyla kaldırıldı:" ; tput sgr0
+            tput setaf 3 ; tput bold ; echo "" ; cat $payload ; echo "" ; tput sgr0
+            
+            # Değişikliklerin aktif olması için Squid servisini yeniden yükle.
+            if [ -f "/etc/init.d/squid3" ]; then
+                service squid3 reload
+            elif [ -f "/etc/init.d/squid" ]; then
+                service squid reload
+            fi  
+            
+            # Son olarak servisin yeniden yüklendiğini bildir.
+            tput setaf 7 ; tput setab 1 ; tput bold ; echo "" ; echo "Squid Proxy başarıyla yeniden yüklendi!" ; echo "" ; tput sgr0
+            exit 1
+        fi
+    fi
+fi

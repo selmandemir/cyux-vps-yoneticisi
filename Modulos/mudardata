@@ -1,0 +1,108 @@
+#!/bin/bash
+clear
+# Başlık metnini mavi arka plan üzerine beyaz ve kalın olarak yazdır.
+tput setaf 7 ; tput setab 4 ; tput bold ; printf '%33s%s%-12s\n' "🐉ㅤ📅ㅤKullanıcı Süresini Değiştirmeㅤ📅ㅤ🐉" ; tput sgr0
+echo ""
+echo -e "\033[1;33m◇ KULLANICI LİSTESİ VE SON KULLANMA TARİHLERİ:\033[0m "
+echo ""
+tput setaf 7 ; tput bold 
+
+# Kullanıcı veritabanı dosyasının yolu.
+database="/root/usuarios.db"
+# Sistemdeki normal kullanıcıları listele.
+list_user=$(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody)
+i=0
+unset _userPass
+
+# Her bir kullanıcı için bir döngü başlat ve bilgilerini göster.
+while read user; do
+    i=$(expr $i + 1)
+    _oP=$i
+    [[ $i == [1-9] ]] && i=0$i && oP+=" 0$i"
+    
+    # Kullanıcının son kullanma tarihini 'chage' komutuyla al.
+    expire="$(chage -l $user | grep -E "Account expires" | cut -d ' ' -f3-)"
+    
+    if [[ $expire == "never" ]]; then
+        # Eğer hesabın süresi "hiçbir zaman" dolmuyorsa.
+        echo -e "\033[1;31m[\033[1;36m$i\033[1;31m] \033[1;37m- \033[1;32m$user       \033[1;33mSÜRESİZ HESAP\033[0m"
+    else
+        databr="$(date -d "$expire" +"%Y%m%d")"
+        hoje="$(date -d today +"%Y%m%d")"
+        if [ $hoje -ge $databr ]; then
+            # Eğer tarih geçmişse.
+            _user=$(echo -e "\033[1;31m[\033[1;36m$i\033[1;31m] \033[1;37m- \033[1;32m$user\033[1;37m")
+            datanormal="$(echo -e "\033[1;31m$(date -d"$expire" '+%d/%m/%Y')")"
+            expired=$(echo -e "\033[1;31m◇ㅤSÜRESİ DOLMUŞ\033[0m")
+            printf '%-62s%-20s%s\n' "$_user" "$datanormal" "$expired"
+        else
+            # Eğer hala geçerliyse.
+            _user=$(echo -e "\033[1;31m[\033[1;36m$i\033[1;31m] \033[1;37m- \033[1;32m$user\033[1;37m")
+            datanormal="$(echo -e "\033[1;33m$(date -d"$expire" '+%d/%m/%Y')")"
+            ative=$(echo -e "\033[1;32m◇ㅤGEÇERLİ\033[0m")
+            printf '%-62s%-20s%s\n' "$_user" "$datanormal" "$ative"
+        fi
+    fi
+    # Daha sonra kolay seçim için kullanıcı listesini bir değişkende biriktir.
+    _userPass+="\n${_oP}:${user}"
+done <<< "${list_user}"
+tput sgr0
+echo ""
+
+# Kullanıcıdan bir seçim yapmasını iste.
+num_user=$(awk -F: '$3>=1000 {print $1}' /etc/passwd | grep -v nobody | wc -l)
+echo -ne "\033[1;32m◇ㅤBir kullanıcı girin veya seçin \033[1;33m[\033[1;36m1\033[1;33m-\033[1;36m$num_user\033[1;33m]\033[1;37m: " ; read option
+
+# Seçilen numaraya karşılık gelen kullanıcı adını bul.
+usuario=$(echo -e "${_userPass}" | grep -E "\b$option\b" | cut -d: -f2 | sed 's/\x1b\[[0-9;]*m//g' | sed 's/ //g')
+
+# Eğer giriş boş veya geçersizse hata ver.
+if [[ -z $option ]] || [[ -z $usuario ]]; then
+    echo ""
+    tput setaf 7 ; tput setab 1 ; tput bold ; echo "◇ㅤHata, Boş veya Geçersiz Kullanıcı Adı! " ; tput sgr0
+    exit 1
+else
+    # Seçilen kullanıcı sistemde gerçekten var mı diye kontrol et.
+    if [[ `grep -c "/$usuario:" /etc/passwd` -ne 0 ]]; then
+        echo ""
+        echo -e "\033[1;31m◇ÖRNEK:\033[1;33m(\033[1;32mTARİH: \033[1;37mGÜN/AY/YIL \033[1;33mveya \033[1;32mGÜN SAYISI: \033[1;37m30\033[1;33m)"
+        echo ""
+        echo -ne "\033[1;32m◇ㅤ\033[1;33m$usuario\033[1;32m kullanıcısı için yeni tarih veya gün sayısı: \033[1;37m"; read inputdate
+        
+        # Girilen verinin gün sayısı mı yoksa tam tarih mi olduğunu kontrol et.
+        if [[ "$(echo -e "$inputdate" | grep -c "/")" = "0" ]]; then 
+            # Eğer gün sayısı ise, bugünün tarihine ekleyerek tam tarihi hesapla.
+            udata=$(date "+%d/%m/%Y" -d "+$inputdate days")
+            sysdate="$(echo "$udata" | awk -v FS=/ -v OFS=- '{print $3,$2,$1}')"
+        else
+            # Eğer tam tarih ise, doğrudan kullan.
+            udata=$(echo -e "$inputdate")
+            sysdate="$(echo "$inputdate" | awk -v FS=/ -v OFS=- '{print $3,$2,$1}')"
+        fi
+        
+        # Girilen tarihin geçerli olup olmadığını kontrol et.
+        if (date "+%Y-%m-%d" -d "$sysdate" > /dev/null 2>&1); then
+            if [[ -z $inputdate ]]; then
+                echo ""; tput setaf 7 ; tput setab 1 ; tput bold ; echo "◇ㅤGeçersiz veya boş bir tarih girdiniz!" ; echo "Geçerli bir tarih girin: GÜN/AY/YIL" ; echo "Örnek: 21/04/2025" ; tput sgr0 ; echo ""; exit 1
+            else
+                # Girilen tarihin geçmiş bir tarih olup olmadığını kontrol et.
+                today="$(date -d today +"%Y%m%d")"
+                timemachine="$(date -d "$sysdate" +"%Y%m%d")"
+                if [ $today -ge $timemachine ]; then
+                    echo ""; tput setaf 7 ; tput setab 1 ; tput bold ; echo "◇ㅤGeçmiş veya geçersiz bir tarih girdiniz!" ; echo "Gelecekteki geçerli bir tarihi girin: GÜN/AY/YIL" ; echo "Örnek: 21/04/2025" ; tput sgr0; echo ""; exit 1
+                else
+                    # Tüm kontrollerden geçtiyse, 'chage' komutuyla kullanıcının son kullanma tarihini güncelle.
+                    chage -E $sysdate $usuario
+                    echo ""
+                    tput setaf 7 ; tput setab 4 ; tput bold ; echo "◇ㅤBaşarılı! $usuario kullanıcısının yeni tarihi: $udata " ; tput sgr0
+                    echo ""
+                    exit 1
+                fi
+            fi
+        else
+            echo ""; tput setaf 7 ; tput setab 1 ; tput bold ; echo "◇ㅤGeçersiz veya boş bir tarih girdiniz!" ; echo "Geçerli bir tarih girin: GÜN/AY/YIL" ; echo "Örnek: 21/04/2025" ; tput sgr0; echo ""; exit 1
+        fi
+    else
+        echo " "; tput setaf 7 ; tput setab 1 ; tput bold ; echo "◇ㅤ$usuario kullanıcısı mevcut değil!" ; tput sgr0; echo " "; exit 1
+    fi
+fi
